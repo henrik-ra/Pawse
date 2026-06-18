@@ -1,0 +1,81 @@
+:root {
+  --bg: #f4f1ea;
+  --ink: #2b2b2b;
+  --panda: #1f1f1f;
+  --accent: #6c5ce7;
+  --good: #2ecc71;
+  --warn: #f1c40f;
+  --bad: #e74c3c;
+  --card: #ffffff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.topbar {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 18px 28px;
+  background: var(--panda);
+  color: #fff;
+}
+.logo { font-size: 1.5rem; font-weight: 700; }
+.tagline { opacity: 0.8; font-size: 0.95rem; }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  padding: 24px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.score-card { grid-column: 1 / -1; text-align: center; }
+.score-card h2 { margin: 0 0 8px; color: var(--accent); }
+.score {
+  font-size: 4.5rem;
+  font-weight: 800;
+  line-height: 1;
+}
+.label {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--warn);
+}
+.label.low { background: var(--good); }
+.label.medium { background: var(--warn); }
+.label.high { background: var(--bad); }
+.for { margin-top: 6px; opacity: 0.6; font-size: 0.9rem; }
+
+.reasons-card, .recs-card { grid-column: span 1; }
+ul { margin: 8px 0 0; padding-left: 20px; line-height: 1.6; }
+
+.disclaimer {
+  text-align: center;
+  padding: 16px;
+  font-size: 0.85rem;
+  opacity: 0.6;
+}
+
+@media (max-width: 720px) {
+  .grid { grid-template-columns: 1fr; }
+}

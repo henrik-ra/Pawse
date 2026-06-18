@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🐼 Pawse</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+  <header class="topbar">
+    <span class="logo">🐼 Pawse</span>
+    <span class="tagline">Stay in flow — and know when to pawse.</span>
+  </header>
+
+  <main class="grid">
+    <section class="card score-card">
+      <h2>Pawse Score</h2>
+      <div class="score" id="score">–</div>
+      <div class="label" id="label">loading…</div>
+      <div class="for" id="for"></div>
+    </section>
+
+    <section class="card">
+      <h3>Meeting density</h3>
+      <canvas id="meetingsChart"></canvas>
+    </section>
+
+    <section class="card">
+      <h3>Heart-rate trend</h3>
+      <canvas id="hrChart"></canvas>
+    </section>
+
+    <section class="card reasons-card">
+      <h3>Why this score</h3>
+      <ul id="reasons"></ul>
+    </section>
+
+    <section class="card recs-card">
+      <h3>💡 Recommendations</h3>
+      <ul id="recommendations"></ul>
+    </section>
+  </main>
+
+  <footer class="disclaimer">
+    Pawse is private, opt-in, and <strong>not a medical diagnosis</strong>.
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

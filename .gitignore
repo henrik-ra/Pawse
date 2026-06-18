@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Data / media (keep small sample JSON, ignore heavy recordings)
+voice-analysis/**/recordings/
+voice-analysis/**/*.mp4
+voice-analysis/**/*.wav
+*.mov
+
+# OS / editor
+.DS_Store
+.idea/
+*.log

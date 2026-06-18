@@ -1,0 +1,44 @@
+{
+  "user": "Alex",
+  "date": "2026-06-18",
+  "timezone": "Europe/Berlin",
+  "storyline": "A typical overloaded workday: meeting-heavy, no breaks, low movement.",
+  "meetings": [
+    { "title": "Daily standup",        "start": "09:00", "end": "09:30", "back_to_back": false, "after_hours": false },
+    { "title": "Project sync",         "start": "09:30", "end": "10:30", "back_to_back": true,  "after_hours": false },
+    { "title": "Design review",        "start": "10:30", "end": "11:30", "back_to_back": true,  "after_hours": false },
+    { "title": "1:1 with manager",     "start": "11:30", "end": "12:00", "back_to_back": true,  "after_hours": false },
+    { "title": "Customer call",        "start": "13:00", "end": "14:00", "back_to_back": false, "after_hours": false },
+    { "title": "Sprint planning",      "start": "14:00", "end": "15:30", "back_to_back": true,  "after_hours": false },
+    { "title": "Stakeholder update",   "start": "16:00", "end": "17:00", "back_to_back": false, "after_hours": false },
+    { "title": "Late sync (US team)",  "start": "19:00", "end": "19:45", "back_to_back": false, "after_hours": true  }
+  ],
+  "wearable": {
+    "source": "fitbit",
+    "steps": 700,
+    "resting_hr": 62,
+    "hr_samples": [
+      { "time": "09:30", "bpm": 78 },
+      { "time": "10:30", "bpm": 96 },
+      { "time": "12:00", "bpm": 71 },
+      { "time": "13:00", "bpm": 70 },
+      { "time": "14:00", "bpm": 99 },
+      { "time": "17:00", "bpm": 82 },
+      { "time": "19:45", "bpm": 88 }
+    ]
+  },
+  "breaks": {
+    "lunch_break": false,
+    "longest_gap_minutes": 60
+  },
+  "voice": {
+    "source": "teams",
+    "analyzed_segments": 2,
+    "avg_stress_index": 0.74,
+    "notes": "Elevated pitch variability and reduced pauses in afternoon meetings."
+  },
+  "expected_outcome": {
+    "pawse_score": 82,
+    "label": "High strain"
+  }
+}
