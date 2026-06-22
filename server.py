@@ -1,8 +1,7 @@
 """Pawse live server.
 
-Serves the dashboard (app/) and a small live API that merges your real
-Google Health (Fitbit) wearable data into the workday and computes the
-Pawse Score. Falls back to demo data when you are not signed in.
+Serves the dashboard (app/) and a small live API that combines your real
+Fitbit data with the calendar/meeting data and computes the Pawse Score.
 
 Run it:
 
@@ -12,9 +11,9 @@ Then open http://localhost:8000 in your browser.
 
 Endpoints:
     GET /                 -> the dashboard (app/index.html)
-    GET /api/live-day     -> { pawse_score, label, reasons, recommendations, data }
+    GET /api/live-day     -> { score, label, reasons, recommendations, data }
 
-Live data is used automatically once you have run
+Live Fitbit data is used automatically once you have run
 ``python devices/google_health/google_auth.py``; otherwise demo data is returned.
 """
 from __future__ import annotations
@@ -27,6 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from devices.google_health.google_health_client import get_daily_signals, prewarm
+from devices.outlook.calendar_client import get_meetings
 from scoring.pawse_score import score_day
 
 _ROOT = Path(__file__).resolve().parent
@@ -53,9 +53,17 @@ def build_live_day(date: str | None = None) -> dict[str, Any]:
     wearable.setdefault("mode", "demo")
     day["wearable"] = wearable
 
+    # Real calendar (meetings + breaks) for this date, pulled from Microsoft 365
+    # via WorkIQ and cached. Falls back to the sample day when not cached.
+    calendar = get_meetings(date)
+    day["meetings"] = calendar["meetings"]
+    day["breaks"] = calendar["breaks"]
+    day["calendar_source"] = calendar["calendar_source"]
+
     result = score_day(day)
     result["data"] = day
     result["mode"] = day["wearable"]["mode"]
+    result["calendar_source"] = day["calendar_source"]
     return result
 
 
@@ -100,7 +108,7 @@ def main() -> None:
     with ThreadingHTTPServer(("localhost", PORT), handler) as httpd:
         print(f"Pawse running at http://localhost:{PORT}")
         print("API:           http://localhost:%d/api/live-day" % PORT)
-        print("Warming live data in the background\u2026")
+        print("Warming live Fitbit data in the background\u2026")
         print("Press Ctrl+C to stop.")
         try:
             httpd.serve_forever()
