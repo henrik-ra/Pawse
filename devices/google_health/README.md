@@ -25,9 +25,9 @@ APIs & Services → **OAuth consent screen**:
 - User type: **External**
 - Add your own Google account under **Test users** (this lets you use the
   sensitive health scopes without going through Google's full app verification).
-- Add the scopes:
-  - `.../auth/health.activity_and_fitness.read`
-  - `.../auth/health.health_metrics_and_measurements.read`
+- Add the scopes (these are the verified Google Health scopes):
+    - `https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly`
+    - `https://www.googleapis.com/auth/googlehealth.health_metrics_and_measurements.readonly`
 
 ### 4. Create OAuth client credentials
 APIs & Services → **Credentials** → **Create credentials** → **OAuth client ID**:
@@ -52,6 +52,9 @@ The header badge switches to **● LIVE** and the dashboard refreshes every 60s.
 - `GET /v4/users/me/dataTypes/steps/dataPoints` → steps (summed for the day)
 - `GET /v4/users/me/dataTypes/daily-resting-heart-rate/dataPoints` → resting HR
 - `GET /v4/users/me/dataTypes/heart-rate/dataPoints` → heart-rate samples
+
+Base URL: `https://health.googleapis.com`. Data-type names are kebab-case in the
+path (e.g. `daily-resting-heart-rate`).
 
 Reference: https://developers.google.com/health/reference/rest
 

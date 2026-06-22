@@ -1,0 +1,21 @@
+{
+  "timezone": "Europe/Berlin",
+  "source": "workiq",
+  "note": "SANITIZED SAMPLE. The real cache (data/calendar_cache.json) is gitignored because it contains private meeting titles. This file only documents the format: real meetings are pulled from Microsoft 365 via WorkIQ at author time, converted from UTC to local time, and cleaned of all-day/multi-day/cancelled events. calendar_client.py derives back-to-back / after-hours / lunch-break from the start/end times.",
+  "fetched_at": "2026-06-22",
+  "days": {
+    "2026-06-22": {
+      "source": "workiq",
+      "meetings": [
+        { "title": "Daily standup", "start": "09:00", "end": "09:30" },
+        { "title": "Design review", "start": "11:00", "end": "12:00" },
+        { "title": "1:1 with manager", "start": "15:00", "end": "15:30" },
+        { "title": "Late sync (US team)", "start": "21:00", "end": "21:45" }
+      ]
+    },
+    "2026-06-21": {
+      "source": "workiq",
+      "meetings": []
+    }
+  }
+}
