@@ -12,6 +12,7 @@ devices/fitbit/.env
 # Google Health secrets & tokens — never commit these
 devices/google_health/google_tokens.json
 devices/google_health/.env
+devices/google_health/google_health_cache.json
 .env
 
 # Data / media (keep small sample JSON, ignore heavy recordings)

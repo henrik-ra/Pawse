@@ -1,8 +1,8 @@
-"""Pawse mock server.
+"""Pawse live server.
 
-Serves the dashboard (app/) and a small API that scores the bundled sample
-workday from ``data/alex_workday.json``. This is the offline/demo backend;
-live wearable and calendar integrations are wired in later.
+Serves the dashboard (app/) and a small live API that merges your real
+Google Health (Fitbit) wearable data into the workday and computes the
+Pawse Score. Falls back to demo data when you are not signed in.
 
 Run it:
 
@@ -13,15 +13,20 @@ Then open http://localhost:8000 in your browser.
 Endpoints:
     GET /                 -> the dashboard (app/index.html)
     GET /api/live-day     -> { pawse_score, label, reasons, recommendations, data }
+
+Live data is used automatically once you have run
+``python devices/google_health/google_auth.py``; otherwise demo data is returned.
 """
 from __future__ import annotations
 
+import datetime as _dt
 import json
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
+from devices.google_health.google_health_client import get_daily_signals, prewarm
 from scoring.pawse_score import score_day
 
 _ROOT = Path(__file__).resolve().parent
@@ -32,14 +37,25 @@ PORT = 8000
 
 
 def build_live_day(date: str | None = None) -> dict[str, Any]:
-    """Score the bundled sample workday (demo data)."""
+    """Merge live wearable signals into the workday and score it."""
     day = json.loads(_SAMPLE.read_text(encoding="utf-8"))
-    if date:
-        day["date"] = date
+    # Default to today so real (live) wearable data is pulled; the sample's
+    # own date is only a fallback when there is no live connection.
+    date = date or _dt.date.today().isoformat()
+
+    signals = get_daily_signals(date)
+    day["date"] = date
+    # Pass through every metric the client computed (steps, resting/avg/peak HR,
+    # HR zones, steps-by-hour, calories, distance, active minutes, SpO2, HRV, …)
+    # while keeping the core keys the scorer relies on.
+    wearable = {k: v for k, v in signals.items() if k != "cache_age_s"}
+    wearable.setdefault("source", "google-health")
+    wearable.setdefault("mode", "demo")
+    day["wearable"] = wearable
 
     result = score_day(day)
     result["data"] = day
-    result["mode"] = "demo"
+    result["mode"] = day["wearable"]["mode"]
     return result
 
 
@@ -78,10 +94,13 @@ class _Handler(SimpleHTTPRequestHandler):
 
 
 def main() -> None:
+    # Start fetching today's live data right away so the first page load is fast.
+    prewarm()
     handler = partial(_Handler, directory=str(_APP_DIR))
     with ThreadingHTTPServer(("localhost", PORT), handler) as httpd:
         print(f"Pawse running at http://localhost:{PORT}")
         print("API:           http://localhost:%d/api/live-day" % PORT)
+        print("Warming live data in the background\u2026")
         print("Press Ctrl+C to stop.")
         try:
             httpd.serve_forever()
