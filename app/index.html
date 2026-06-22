@@ -3,49 +3,169 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🐼 Pawse</title>
+  <title>🐼 Pawse — your calm-at-work companion</title>
   <link rel="stylesheet" href="style.css" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="vendor/chart.umd.min.js"></script>
 </head>
 <body>
+  <!-- ===== Top bar ===== -->
   <header class="topbar">
-    <span class="logo">🐼 Pawse</span>
-    <span class="tagline">Stay in flow — and know when to pawse.</span>
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">🐼</span>
+      <div class="brand-text">
+        <span class="brand-name">Pawse</span>
+        <span class="brand-tag">Stay in flow — and know when to pawse.</span>
+      </div>
+    </div>
+
+    <nav class="daynav" aria-label="Day navigation">
+      <button class="daynav-btn" id="prevDay" title="Previous day">‹</button>
+      <div class="daynav-center">
+        <span class="daynav-date" id="navDate">—</span>
+        <span class="daynav-rel" id="navRel"></span>
+      </div>
+      <button class="daynav-btn" id="nextDay" title="Next day">›</button>
+      <button class="daynav-today" id="todayBtn">Today</button>
+    </nav>
+
     <span class="mode demo" id="mode">○ Demo data</span>
   </header>
 
-  <main class="grid">
-    <section class="card score-card">
-      <h2>Pawse Score</h2>
-      <div class="score" id="score">–</div>
-      <div class="label" id="label">loading…</div>
-      <div class="for" id="for"></div>
+  <main class="page">
+    <!-- ===== Hero: panda + score ===== -->
+    <section class="hero card">
+      <div class="hero-gauge">
+        <div class="gauge" id="gauge">
+          <div class="gauge-inner">
+            <!-- Panda mascot (reacts to the score) -->
+            <svg id="panda" class="panda" viewBox="0 0 200 200" role="img" aria-label="Panda mood">
+              <g class="panda-bob">
+                <!-- ears -->
+                <circle class="p-ear" cx="55" cy="48" r="26" />
+                <circle class="p-ear" cx="145" cy="48" r="26" />
+                <circle class="p-ear-in" cx="55" cy="48" r="13" />
+                <circle class="p-ear-in" cx="145" cy="48" r="13" />
+                <!-- head -->
+                <ellipse class="p-head" cx="100" cy="112" rx="80" ry="74" />
+                <!-- eye patches -->
+                <ellipse class="p-patch" cx="74" cy="104" rx="20" ry="26" transform="rotate(-18 74 104)" />
+                <ellipse class="p-patch" cx="126" cy="104" rx="20" ry="26" transform="rotate(18 126 104)" />
+                <!-- eyes -->
+                <circle class="p-eye" cx="76" cy="106" r="8" />
+                <circle class="p-eye" cx="124" cy="106" r="8" />
+                <circle class="p-eye-hi" cx="79" cy="103" r="2.6" />
+                <circle class="p-eye-hi" cx="127" cy="103" r="2.6" />
+                <!-- brows (shown when stressed) -->
+                <path class="p-brow" d="M62 80 L92 90" />
+                <path class="p-brow" d="M138 80 L108 90" />
+                <!-- blush (shown when calm) -->
+                <ellipse class="p-blush" cx="58" cy="132" rx="11" ry="7" />
+                <ellipse class="p-blush" cx="142" cy="132" rx="11" ry="7" />
+                <!-- nose -->
+                <ellipse class="p-nose" cx="100" cy="130" rx="10" ry="7" />
+                <path class="p-nose-line" d="M100 137 V146" />
+                <!-- mouth (path is swapped per mood) -->
+                <path id="pandaMouth" class="p-mouth" d="M82 150 Q100 166 118 150" />
+                <!-- sweat drop (shown when stressed) -->
+                <path class="p-sweat" d="M150 70 q-7 11 0 16 a8 8 0 0 0 0 -16 z" />
+                <!-- zen sparkle (shown when calm) -->
+                <text class="p-zen" x="146" y="58">✿</text>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-info">
+        <div class="hero-score">
+          <span class="hero-score-num" id="score">–</span>
+          <span class="hero-score-max">/100</span>
+        </div>
+        <div class="hero-label label" id="label">loading…</div>
+        <p class="hero-summary" id="summary">Reading your day…</p>
+        <div class="hero-meta">
+          <span class="chip" id="chipUser">—</span>
+          <span class="chip" id="chipSensors">— sensors live</span>
+        </div>
+      </div>
     </section>
 
-    <section class="card">
-      <h3>Meeting density</h3>
-      <canvas id="meetingsChart"></canvas>
+    <!-- ===== KPI tiles ===== -->
+    <section class="tiles" id="tiles"><!-- filled by app.js --></section>
+
+    <!-- ===== Charts ===== -->
+    <section class="charts">
+      <article class="card chart-card chart-wide">
+        <header class="chart-head">
+          <h3>Heart rate · full day</h3>
+          <span class="chart-sub" id="hrSub"></span>
+        </header>
+        <div class="chart-box"><canvas id="hrChart"></canvas></div>
+      </article>
+
+      <article class="card chart-card">
+        <header class="chart-head"><h3>Heart-rate zones</h3></header>
+        <div class="chart-box donut"><canvas id="zonesChart"></canvas></div>
+      </article>
+
+      <article class="card chart-card chart-wide">
+        <header class="chart-head">
+          <h3>Steps by hour</h3>
+          <span class="chart-sub" id="stepsSub"></span>
+        </header>
+        <div class="chart-box"><canvas id="stepsChart"></canvas></div>
+      </article>
+
+      <article class="card chart-card">
+        <header class="chart-head"><h3>Meeting density</h3></header>
+        <div class="chart-box"><canvas id="meetingsChart"></canvas></div>
+      </article>
     </section>
 
-    <section class="card">
-      <h3>Heart-rate trend</h3>
-      <canvas id="hrChart"></canvas>
+    <!-- ===== Full meeting list ===== -->
+    <section class="schedule">
+      <article class="card schedule-card">
+        <header class="chart-head">
+          <h3>📅 Meetings</h3>
+          <span class="chart-sub" id="scheduleSub"></span>
+        </header>
+        <ul class="meeting-list" id="meetingList"><!-- filled by app.js --></ul>
+      </article>
     </section>
 
-    <section class="card reasons-card">
-      <h3>Why this score</h3>
-      <ul id="reasons"></ul>
+    <!-- ===== Insights ===== -->
+    <section class="insights">
+      <article class="card insight-card">
+        <h3>Why this score</h3>
+        <ul id="reasons" class="bullets reasons"></ul>
+      </article>
+
+      <article class="card insight-card">
+        <h3>💡 Recommendations</h3>
+        <ul id="recommendations" class="bullets recs"></ul>
+      </article>
+
+      <article class="card insight-card voice-card">
+        <h3>🎙️ Voice &amp; stress</h3>
+        <div class="voice-meter">
+          <div class="voice-bar"><span id="voiceFill"></span></div>
+          <div class="voice-val" id="voiceVal">—</div>
+        </div>
+        <p class="voice-note" id="voiceNote">—</p>
+      </article>
     </section>
 
-    <section class="card recs-card">
-      <h3>💡 Recommendations</h3>
-      <ul id="recommendations"></ul>
-    </section>
+    <footer class="disclaimer">
+      Pawse is private, opt-in, and <strong>not a medical diagnosis</strong>.
+      Sensor data is read live from Google Health (Fitbit).
+    </footer>
   </main>
 
-  <footer class="disclaimer">
-    Pawse is private, opt-in, and <strong>not a medical diagnosis</strong>.
-  </footer>
+  <!-- Loading overlay (shown while fetching a day) -->
+  <div class="loading" id="loading" hidden>
+    <div class="loading-panda">🐼</div>
+    <div class="loading-text">Fetching your day…</div>
+  </div>
 
   <script src="app.js"></script>
 </body>
