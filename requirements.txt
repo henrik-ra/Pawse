@@ -1,6 +1,9 @@
 # Core
 pandas>=2.0
 
+# Live Fitbit integration (OAuth2 + Web API calls)
+requests>=2.31
+
 # Voice analysis (Teams meeting audio → biomarkers)
 # Uncomment as you implement each module.
 # librosa>=0.10          # audio feature extraction (pitch, jitter, shimmer, energy)

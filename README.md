@@ -2,20 +2,12 @@
 
 > **Stay in flow — and know when to pawse.**
 
-Your calendar might look full, but your energy tells a completely different story.
-**pawse** reads both — combining meeting patterns with real-world signals like heart rate
-and movement.
+Your calendar might look full, but your body tells a completely different story.
+**Pawse** reads both — combining meeting patterns with **real physiological signals**
+from your Fitbit or Apple Watch (heart rate, HRV, movement).
 
-It turns invisible stress into clear insights and smarter decisions for your workday.
-
-So instead of reacting too late, you know exactly when it's time to pawse.
-
----
-
-Pawse is a wellbeing tool that reads signals from your **calendar**, **meetings**, and
-**wearable devices** (heart rate, movement) plus **voice biomarkers** from meetings to
-detect overload, give your day a **Pawse Score (0–100)**, explain *why*, and suggest
-helpful recovery actions.
+It turns invisible stress into clear insights and one protective action:
+**blocking recovery time before you burn out.**
 
 > ⚠️ Pawse is **private, opt-in, and not a medical diagnosis.**
 
@@ -41,41 +33,89 @@ helpful recovery actions.
 └────────────┘     └──────────────────┘
 ```
 
+
 ---
 
 ## 📁 Project structure
 
-| Folder | Purpose | Owners |
-|---|---|---|
-| [`data/`](data/) | **Task 1** — Sample workday data ("Alex", an overloaded day) | Person 1 + 2 |
-| [`scoring/`](scoring/) | **Task 2** — Pawse Score + logic (signals → score + reasons) | Person 3 + 4 |
-| [`app/`](app/) | **Task 3** — Panda dashboard / connection UI | Person 5 + 6 |
-| [`devices/`](devices/) | Wearable integrations (Fitbit, Apple Watch) | — |
-| [`voice-analysis/`](voice-analysis/) | Teams video → audio → voice biomarkers (stress/burnout) | — |
+| Folder | Purpose |
+|---|---|
+| [`data/`](data/) | **Task 1** — Sample workday ("Alex", an overloaded day) |
+| [`scoring/`](scoring/) | **Task 2** — Pawse Score engine (signals → score + reasons + recommendations) |
+| [`app/`](app/) | **Task 3** — Panda dashboard (score, charts, panda, actions) |
+| [`devices/`](devices/) | **Core** — Live wearable data (Fitbit, Apple Watch, Google Health) |
+| [`voice-analysis/`](voice-analysis/) | Teams video → voice biomarkers (stress index) |
+| [`docs/`](docs/) | Architecture, product vision, ML roadmap, prior art |
 
 ---
 
 ## 🚀 Quick start
 
 ```powershell
-# (optional) create a virtual environment
+# (optional) virtual environment
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-# install Python dependencies
+# install dependencies
 pip install -r requirements.txt
 
-# run the scoring demo on the sample data
+# run the scoring demo on sample data (no device needed)
 python scoring/pawse_score.py
 
-# open the dashboard
+# open the dashboard (static, no backend required)
 start app/index.html
 ```
 
 ---
 
+## ⌚ Live mode — real wearable data
+
+### Option A — Fitbit (direct API, recommended for hackathon)
+
+```powershell
+# 1) Set your Fitbit app credentials (get them at dev.fitbit.com)
+$env:FITBIT_CLIENT_ID = "YOUR_CLIENT_ID"
+$env:FITBIT_CLIENT_SECRET = "YOUR_CLIENT_SECRET"
+
+# 2) One-time login (browser opens → Allow)
+python devices/fitbit/fitbit_auth.py
+
+# 3) Start the live dashboard
+python server.py      # → http://localhost:8000
+```
+
+Dashboard shows **● LIVE (Fitbit)** and refreshes every 60 seconds with real HR + steps.
+
+### Option B — Fitbit / Pixel Watch via Google Health API
+
+```powershell
+$env:GOOGLE_CLIENT_ID = "YOUR_CLIENT_ID.apps.googleusercontent.com"
+$env:GOOGLE_CLIENT_SECRET = "YOUR_CLIENT_SECRET"
+python devices/google_health/google_auth.py
+python server.py
+```
+
+### Option C — Apple Watch (iOS Shortcut push)
+
+See [`devices/apple-watch/README.md`](devices/apple-watch/README.md) for the
+Shortcut automation that pushes HR + steps directly to the Pawse API.
+
+### No device? No problem.
+
+All clients fall back to **realistic mock data** automatically.
+The demo always works — no OAuth needed.
+
+---
+
 ## 🎯 Hackathon tasks
 
-- **🥇 Task 1 — Core demo scenario** → `data/` (one perfect overloaded-workday story)
-- **🥈 Task 2 — Pawse Score + logic** → `scoring/` (3–5 signals → score + reasons)
-- **🥉 Task 3 — Demo dashboard** → `app/` (big score, 2–3 charts, panda, recommendations)
+| Task | Folder | Goal |
+|---|---|---|
+| **Task 1** — Core demo scenario | [`data/`](data/) | One perfect overloaded-workday story ("Alex") |
+| **Task 2** — Pawse Score + logic | [`scoring/`](scoring/) | 5 signals → score + reasons + recommendations |
+| **Task 3** — Demo dashboard | [`app/`](app/) | Big score, charts, panda, "Protect tomorrow" button |
+| **Core** — Live device integration | [`devices/`](devices/) | Real Fitbit or Apple Watch data in the demo |
+
+> **The demo-winning moment:** real heart-rate data from a Fitbit **+** a
+> real Outlook calendar block created with one click.
+> That combination is what no slide can replace.

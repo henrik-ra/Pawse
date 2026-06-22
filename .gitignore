@@ -5,6 +5,15 @@ __pycache__/
 venv/
 *.egg-info/
 
+# Fitbit secrets & tokens — never commit these
+devices/fitbit/fitbit_tokens.json
+devices/fitbit/.env
+
+# Google Health secrets & tokens — never commit these
+devices/google_health/google_tokens.json
+devices/google_health/.env
+.env
+
 # Data / media (keep small sample JSON, ignore heavy recordings)
 voice-analysis/**/recordings/
 voice-analysis/**/*.mp4

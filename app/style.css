@@ -29,6 +29,16 @@ body {
 .logo { font-size: 1.5rem; font-weight: 700; }
 .tagline { opacity: 0.8; font-size: 0.95rem; }
 
+.mode {
+  margin-left: auto;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.mode.live { background: rgba(46, 204, 113, 0.2); color: #2ecc71; }
+.mode.demo { background: rgba(255, 255, 255, 0.15); color: #ddd; }
+
 .grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

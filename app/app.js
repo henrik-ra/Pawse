@@ -66,9 +66,13 @@ function fillList(id, items) {
   items.forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
 }
 
+let meetingsChart = null;
+let hrChart = null;
+
 function renderMeetingsChart(data) {
   const meetings = data.meetings || [];
-  new Chart(document.getElementById("meetingsChart"), {
+  if (meetingsChart) meetingsChart.destroy();
+  meetingsChart = new Chart(document.getElementById("meetingsChart"), {
     type: "bar",
     data: {
       labels: meetings.map(m => m.start),
@@ -84,7 +88,8 @@ function renderMeetingsChart(data) {
 
 function renderHrChart(data) {
   const samples = (data.wearable || {}).hr_samples || [];
-  new Chart(document.getElementById("hrChart"), {
+  if (hrChart) hrChart.destroy();
+  hrChart = new Chart(document.getElementById("hrChart"), {
     type: "line",
     data: {
       labels: samples.map(s => s.time),
@@ -100,16 +105,53 @@ function renderHrChart(data) {
   });
 }
 
-async function main() {
+// How often to refresh live data (ms). Set to 0 to disable auto-refresh.
+const REFRESH_MS = 60000;
+
+function showMode(mode) {
+  const el = document.getElementById("mode");
+  if (!el) return;
+  if (mode === "live") {
+    el.textContent = "● LIVE (Fitbit)";
+    el.className = "mode live";
+  } else {
+    el.textContent = "○ Demo data";
+    el.className = "mode demo";
+  }
+}
+
+async function loadOnce() {
+  // 1) Try the live API (served by server.py).
   try {
-    const res = await fetch("../data/alex_workday.json");
+    const res = await fetch("/api/live-day", { cache: "no-store" });
+    if (res.ok) {
+      const result = await res.json();
+      if (!result.error) {
+        render(result);
+        showMode(result.mode || "demo");
+        return;
+      }
+    }
+  } catch (_) {
+    /* server not running — fall back to the static sample below */
+  }
+
+  // 2) Fallback: static sample file (no backend).
+  try {
+    const res = await fetch("../data/alex_workday.json", { cache: "no-store" });
     const data = await res.json();
     render(scoreDay(data));
+    showMode("demo");
   } catch (e) {
     document.getElementById("label").textContent =
-      "Could not load data — serve the folder over http (e.g. `python -m http.server`).";
+      "Could not load data — run `python server.py` and open http://localhost:8000.";
     console.error(e);
   }
+}
+
+function main() {
+  loadOnce();
+  if (REFRESH_MS > 0) setInterval(loadOnce, REFRESH_MS);
 }
 
 main();
