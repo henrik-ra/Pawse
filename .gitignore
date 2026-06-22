@@ -15,6 +15,9 @@ devices/google_health/.env
 devices/google_health/google_health_cache.json
 .env
 
+# Calendar cache — contains real meeting titles; commit only the .sample file
+data/calendar_cache.json
+
 # Data / media (keep small sample JSON, ignore heavy recordings)
 voice-analysis/**/recordings/
 voice-analysis/**/*.mp4
