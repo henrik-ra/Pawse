@@ -1,7 +1,8 @@
-"""Pawse live server.
+"""Pawse mock server.
 
-Serves the dashboard (app/) and a small live API that combines your real
-Fitbit data with the calendar/meeting data and computes the Pawse Score.
+Serves the dashboard (app/) and a small API that scores the bundled sample
+workday from ``data/alex_workday.json``. This is the offline/demo backend;
+live wearable and calendar integrations are wired in later.
 
 Run it:
 
@@ -11,21 +12,16 @@ Then open http://localhost:8000 in your browser.
 
 Endpoints:
     GET /                 -> the dashboard (app/index.html)
-    GET /api/live-day     -> { score, label, reasons, recommendations, data }
-
-Live Fitbit data is used automatically once you have run
-``python devices/google_health/google_auth.py``; otherwise demo data is returned.
+    GET /api/live-day     -> { pawse_score, label, reasons, recommendations, data }
 """
 from __future__ import annotations
 
-import datetime as _dt
 import json
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from devices.google_health.google_health_client import get_daily_signals
 from scoring.pawse_score import score_day
 
 _ROOT = Path(__file__).resolve().parent
@@ -36,23 +32,14 @@ PORT = 8000
 
 
 def build_live_day(date: str | None = None) -> dict[str, Any]:
-    """Merge live wearable signals into the workday and score it."""
+    """Score the bundled sample workday (demo data)."""
     day = json.loads(_SAMPLE.read_text(encoding="utf-8"))
-    date = date or day.get("date") or _dt.date.today().isoformat()
-
-    signals = get_daily_signals(date)
-    day["date"] = date
-    day["wearable"] = {
-        "source": signals.get("source", "google-health"),
-        "mode": signals.get("mode", "demo"),
-        "steps": signals.get("steps", 0),
-        "resting_hr": signals.get("resting_hr", 60),
-        "hr_samples": signals.get("hr_samples", []),
-    }
+    if date:
+        day["date"] = date
 
     result = score_day(day)
     result["data"] = day
-    result["mode"] = day["wearable"]["mode"]
+    result["mode"] = "demo"
     return result
 
 
@@ -81,7 +68,13 @@ class _Handler(SimpleHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(body)
+        try:
+            self.wfile.write(body)
+        except (ConnectionError, OSError):
+            pass  # browser navigated away / refreshed mid-response — ignore
+
+    def log_message(self, fmt, *args):  # noqa: N802 (http.server API)
+        pass  # quiet access log; errors still print
 
 
 def main() -> None:
