@@ -1,0 +1,50 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.0",
+  "id": "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
+  "developer": {
+    "name": "Pawse Hackathon Team",
+    "websiteUrl": "http://localhost:8000",
+    "privacyUrl": "http://localhost:8000/teamsapp/index.html",
+    "termsOfUseUrl": "http://localhost:8000/teamsapp/index.html"
+  },
+  "name": {
+    "short": "Pawse",
+    "full": "Pawse — wellbeing biomarkers in your meetings"
+  },
+  "description": {
+    "short": "On-device wellbeing biomarkers during your Teams meetings.",
+    "full": "Pawse measures your fatigue, facial tension, emotion and vocal stress locally during a Teams meeting and lets you save the session to your wellbeing dashboard. All processing is on-device; only derived scores are stored."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#6264A7",
+  "staticTabs": [
+    {
+      "entityId": "pawse-capture",
+      "name": "Pawse",
+      "contentUrl": "http://localhost:8000/teamsapp/index.html",
+      "websiteUrl": "http://localhost:8000/teamsapp/index.html",
+      "scopes": ["personal"]
+    }
+  ],
+  "configurableTabs": [
+    {
+      "configurationUrl": "http://localhost:8000/teamsapp/config.html",
+      "canUpdateConfiguration": true,
+      "scopes": ["groupChat"],
+      "context": ["meetingSidePanel", "meetingChatTab", "meetingDetailsTab", "meetingStage"]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "devicePermissions": ["media"],
+  "validDomains": [
+    "localhost:8000",
+    "cdn.jsdelivr.net",
+    "storage.googleapis.com",
+    "res.cdn.office.net"
+  ]
+}

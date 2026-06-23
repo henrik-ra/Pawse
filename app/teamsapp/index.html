@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pawse · in Teams</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://res.cdn.office.net/teams-js/2.24.0/js/MicrosoftTeams.min.js"
+          crossorigin="anonymous"></script>
+</head>
+<body>
+  <header class="bar">
+    <span class="brand">🐼 Pawse</span>
+    <nav class="tabs">
+      <button class="tab-btn active" data-view="capture">Live capture</button>
+      <button class="tab-btn" data-view="dashboard">Dashboard</button>
+    </nav>
+    <span class="status" id="ctx">standalone</span>
+  </header>
+
+  <!-- ===== Live capture view ===== -->
+  <main id="view-capture" class="view">
+    <section class="capture">
+      <div class="cam-wrap">
+        <video id="video" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
+        <span class="pill"><span class="dot" id="dot"></span><span id="live">starting…</span></span>
+      </div>
+
+      <aside class="panel">
+        <h2 id="meetingTitle">Ad-hoc meeting</h2>
+        <p class="muted" id="meetingTime">measuring on-device · nothing uploaded</p>
+
+        <div class="bigscore">
+          <span id="distress">–</span><small>/100 distress</small>
+        </div>
+
+        <div class="bars" id="bars"></div>
+
+        <div class="actions">
+          <button id="startBtn" class="primary">Start capture</button>
+          <button id="saveBtn" class="primary" disabled>End &amp; save to dashboard</button>
+        </div>
+        <p class="note" id="note">Grant camera &amp; microphone access when prompted.</p>
+      </aside>
+    </section>
+  </main>
+
+  <!-- ===== Dashboard view ===== -->
+  <main id="view-dashboard" class="view" hidden>
+    <iframe id="dash" class="dash" title="Pawse dashboard"></iframe>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
