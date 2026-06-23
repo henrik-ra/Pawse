@@ -172,6 +172,14 @@
     </footer>
   </main>
 
+  <!-- ===== Meeting detail modal (biomarkers + reasons + actions) ===== -->
+  <div class="modal-backdrop" id="meetingModal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Meeting details">
+      <button class="modal-close" id="modalClose" aria-label="Close">×</button>
+      <div id="modalBody"><!-- filled by app.js --></div>
+    </div>
+  </div>
+
   <!-- Loading overlay (shown while fetching a day) -->
   <div class="loading" id="loading" hidden>
     <div class="loading-panda">🐼</div>

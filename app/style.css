@@ -410,3 +410,77 @@ body {
 }
 .bm-bar i { display: block; height: 100%; border-radius: 4px; }
 .bm-val { width: 22px; text-align: right; font-weight: 700; color: var(--ink); }
+
+/* ===== Clickable meeting rows + detail modal ===== */
+.meeting-row.clickable { cursor: pointer; transition: background 0.15s ease; }
+.meeting-row.clickable:hover { background: #f3f7f4; }
+.teams-row.clickable { position: relative; }
+.teams-row.clickable::after {
+  content: "\203a";
+  position: absolute;
+  right: 14px;
+  top: 12px;
+  color: var(--ink-soft);
+  font-size: 1.3rem;
+}
+
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 15, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+  padding: 20px;
+  animation: fade 0.2s ease both;
+}
+.modal-backdrop[hidden] { display: none; }
+.modal-card {
+  position: relative;
+  background: var(--card);
+  border-radius: 18px;
+  width: min(560px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  animation: rise 0.3s ease both;
+}
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+.modal-close:hover { color: var(--ink); }
+.modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.modal-head h2 { margin: 0; font-size: 1.25rem; }
+.modal-sub { margin: 2px 0 0; font-size: 0.8rem; color: var(--ink-soft); }
+.distress-chip.big { font-size: 1rem; min-width: 40px; padding: 4px 10px; border-radius: 10px; }
+.modal-summary { margin: 12px 0 4px; font-size: 0.9rem; color: var(--ink); }
+.modal-bm { margin: 14px 0 4px; }
+.modal-h3 { margin: 18px 0 8px; font-size: 0.92rem; }
+.why-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.why-row {
+  display: grid;
+  grid-template-columns: 128px 1fr;
+  gap: 10px;
+  align-items: start;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f6f8f6;
+  font-size: 0.82rem;
+}
+.why-row.why-high { background: #fdecea; }
+.why-row.why-med { background: #fff6e6; }
+.why-mark { font-weight: 700; color: var(--ink); }
+.why-text { color: var(--ink-soft); }
+.action-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 0.86rem; color: var(--ink); }
+.action-list li { line-height: 1.35; }

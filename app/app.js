@@ -375,19 +375,94 @@ function applyBiomarkerBadges() {
     const rec = teamsIndex[li.dataset.key || ""];
     let chip = titleEl.querySelector(".distress-chip");
     if (rec) {
+      const score = Math.round(rec.distress_score ?? 0);
       if (!chip) {
         chip = document.createElement("span");
         chip.className = "distress-chip";
         titleEl.appendChild(document.createTextNode(" "));
         titleEl.appendChild(chip);
       }
-      chip.textContent = rec.score;
-      chip.style.background = distressColor(rec.score);
-      chip.title = "Biomarkers recorded \u00b7 distress " + rec.score;
+      chip.textContent = score;
+      chip.style.background = distressColor(score);
+      chip.title = "Biomarkers recorded \u00b7 click for details";
+      li.classList.add("clickable");
+      li.onclick = () => openMeetingModal(rec);
     } else if (chip) {
       chip.remove();
+      li.classList.remove("clickable");
+      li.onclick = null;
     }
   });
+}
+
+// ---- Meeting detail modal (biomarkers + reasons + actions) -----------------
+function clientInsights(s) {
+  const bm = s.biomarkers || {};
+  const lvl = v => (v >= 65 ? "high" : v >= 45 ? "med" : "low");
+  const TXT = {
+    fatigue: ["Frequent/long eye-closures and yawning \u2014 tiredness or screen fatigue.", "Some elevated eye-closure \u2014 mild tiredness.", "Alert eyes \u2014 little fatigue."],
+    emotion: ["Negative facial expression for stretches of the call.", "Occasional negative expressions.", "Mostly neutral/positive expression."],
+    tension: ["Frequent brow furrowing and jaw clenching \u2014 strain.", "Some brow furrowing.", "Relaxed face."],
+    voice: ["Raised pitch, more jitter, fewer pauses \u2014 pressure.", "Slightly elevated vocal arousal.", "Calm, steady voice."],
+  };
+  const LAB = { fatigue: "Fatigue", emotion: "Emotion", tension: "Muscle tension", voice: "Voice" };
+  const reasons = ["fatigue", "emotion", "tension", "voice"].map(k => {
+    const v = Math.round(bm[k] ?? 0); const l = lvl(v);
+    return { marker: k, label: LAB[k], value: v, level: l, text: TXT[k][l === "high" ? 0 : l === "med" ? 1 : 2] };
+  });
+  const recs = [];
+  const f = bm.fatigue || 0, e = bm.emotion || 0, t = bm.tension || 0, vo = bm.voice || 0, d = s.distress_score || 0;
+  if ((s.duration_min || 0) >= 60) recs.push("Keep this meeting type to 45 min or add a mid-point break.");
+  if (t >= 65) recs.push("Do a 30-second shoulder/jaw release before the call.");
+  if (f >= 65) recs.push("Schedule it earlier and take a 10-min screen break beforehand.");
+  if (e >= 65 || vo >= 65) recs.push("Send an agenda with the desired outcome beforehand.");
+  if (d >= 70) recs.push("Add a 15-min recovery Pawse right after; avoid back-to-back.");
+  if (!recs.length) recs.push("Looked balanced \u2014 keep the same setup.");
+  return { summary: "", reasons, recommendations: recs };
+}
+
+function openMeetingModal(s) {
+  const modal = document.getElementById("meetingModal");
+  const body = document.getElementById("modalBody");
+  if (!modal || !body) return;
+  const ins = s.insights || clientInsights(s);
+  const score = Math.round(s.distress_score ?? 0);
+  const bars = BIOMARKERS.map(([k, lab, c]) => {
+    const v = Math.max(0, Math.min(100, Math.round((s.biomarkers || {})[k] ?? 0)));
+    return `<span class="bm"><span class="bm-label">${lab}</span>` +
+      `<span class="bm-bar"><i style="width:${v}%;background:${c}"></i></span>` +
+      `<span class="bm-val">${v}</span></span>`;
+  }).join("");
+  const reasons = (ins.reasons || []).map(r =>
+    `<li class="why-row why-${r.level}">` +
+    `<span class="why-mark">${escapeHtml(r.label)} <b>${r.value}</b></span>` +
+    `<span class="why-text">${escapeHtml(r.text)}</span></li>`).join("");
+  const recs = (ins.recommendations || []).map(a => `<li>${escapeHtml(a)}</li>`).join("");
+  const when = `${escapeHtml(s.start || "")}\u2013${escapeHtml(s.end || "")}` +
+    (s.duration_min ? ` \u00b7 ${fmtDur(s.duration_min)}` : "") +
+    (s.date ? ` \u00b7 ${escapeHtml(s.date)}` : "");
+  body.innerHTML = `
+    <div class="modal-head">
+      <div>
+        <h2>${escapeHtml(s.title || "Teams meeting")}</h2>
+        <p class="modal-sub">${when}</p>
+      </div>
+      <span class="distress-chip big" style="background:${distressColor(score)}">${score}</span>
+    </div>
+    ${ins.summary ? `<p class="modal-summary">${escapeHtml(ins.summary)}</p>` : ""}
+    <div class="bm-grid modal-bm">${bars}</div>
+    <h3 class="modal-h3">Why these readings</h3>
+    <ul class="why-list">${reasons}</ul>
+    <h3 class="modal-h3">Actions for calmer meetings</h3>
+    <ul class="action-list">${recs}</ul>`;
+  modal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeMeetingModal() {
+  const modal = document.getElementById("meetingModal");
+  if (modal) modal.hidden = true;
+  document.body.style.overflow = "";
 }
 
 async function fetchTeamsSessions(date) {
@@ -418,12 +493,10 @@ function renderTeamsSessions(payload) {
   const root = document.getElementById("teamsSessions");
   const sub = document.getElementById("teamsSub");
   if (!root) return;
-  const sessions = (payload.sessions || []).slice().reverse();
-  // Index recorded meetings so the calendar list above can show a distress badge.
+  const sessions = (payload.sessions || []).slice(); // chronological (earliest first)
+  // Index recorded meetings (full session) so the calendar list can link to details.
   teamsIndex = {};
-  (payload.sessions || []).forEach(s => {
-    teamsIndex[meetingKey(s.title, s.start)] = { score: Math.round(s.distress_score ?? 0), label: s.label };
-  });
+  (payload.sessions || []).forEach(s => { teamsIndex[meetingKey(s.title, s.start)] = s; });
   applyBiomarkerBadges();
   root.innerHTML = "";
   if (!sessions.length) {
@@ -450,8 +523,9 @@ function renderTeamsSessions(payload) {
         `<span class="bm-val">${v}</span></span>`;
     }).join("");
     const li = document.createElement("li");
-    li.className = "meeting-row teams-row";
+    li.className = "meeting-row teams-row clickable";
     li.style.animationDelay = `${i * 40}ms`;
+    li.onclick = () => openMeetingModal(s);
     li.innerHTML = `
       <span class="m-time"><strong>${escapeHtml(s.start || "")}</strong><span>${escapeHtml(s.end || "")}</span></span>
       <span class="m-main">
@@ -529,6 +603,13 @@ function main() {
     if (next <= state.today) fetchDay(next);
   });
   document.getElementById("todayBtn").addEventListener("click", () => fetchDay(state.today));
+
+  // Meeting detail modal close handlers
+  document.getElementById("modalClose").addEventListener("click", closeMeetingModal);
+  document.getElementById("meetingModal").addEventListener("click", e => {
+    if (e.target.id === "meetingModal") closeMeetingModal();
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeMeetingModal(); });
 
   fetchDay(state.date);
 

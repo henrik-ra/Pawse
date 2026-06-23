@@ -12,6 +12,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from meeting_insights import analyze_session
+
 _ROOT = Path(__file__).resolve().parent
 SESSIONS_FILE = _ROOT / "data" / "teams_sessions.json"
 
@@ -54,6 +56,8 @@ def sessions_for(date: str | None = None) -> dict[str, Any]:
     for_date = [s for s in alls if not date or s.get("date") == date]
     recent = list(reversed(alls))[:5]
     shown = for_date if for_date else recent
+    for s in shown:
+        s["insights"] = analyze_session(s)
     avg = round(sum(float(s.get("distress_score", 0)) for s in shown) / len(shown)) if shown else 0
     return {
         "sessions": shown,
