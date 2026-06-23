@@ -321,6 +321,7 @@ function renderMeetingList(data) {
     const li = document.createElement("li");
     li.className = "meeting-row" + (m.after_hours ? " is-after" : m.back_to_back ? " is-b2b" : "");
     li.style.animationDelay = `${i * 40}ms`;
+    li.dataset.key = meetingKey(m.title, m.start);
     const tags = [];
     if (m.back_to_back) tags.push(`<span class="m-tag tag-b2b">back-to-back</span>`);
     if (m.after_hours) tags.push(`<span class="m-tag tag-after">after-hours</span>`);
@@ -332,6 +333,7 @@ function renderMeetingList(data) {
       </span>`;
     root.appendChild(li);
   });
+  applyBiomarkerBadges();
 }
 
 function fmtDur(min) {
@@ -360,6 +362,33 @@ function fillList(id, items) {
 }
 // ---- Teams meeting biomarkers (Pawse app) ---------------------------------
 function distressColor(s) { return s >= 70 ? "#e8553e" : s >= 40 ? "#f4b740" : "#3fa34d"; }
+
+// Link recorded biomarker sessions to calendar meetings (same title + start).
+let teamsIndex = {};
+function meetingKey(title, start) {
+  return String(title || "").trim().toLowerCase() + "|" + String(start || "");
+}
+function applyBiomarkerBadges() {
+  document.querySelectorAll("#meetingList .meeting-row").forEach(li => {
+    const titleEl = li.querySelector(".m-title");
+    if (!titleEl) return;
+    const rec = teamsIndex[li.dataset.key || ""];
+    let chip = titleEl.querySelector(".distress-chip");
+    if (rec) {
+      if (!chip) {
+        chip = document.createElement("span");
+        chip.className = "distress-chip";
+        titleEl.appendChild(document.createTextNode(" "));
+        titleEl.appendChild(chip);
+      }
+      chip.textContent = rec.score;
+      chip.style.background = distressColor(rec.score);
+      chip.title = "Biomarkers recorded \u00b7 distress " + rec.score;
+    } else if (chip) {
+      chip.remove();
+    }
+  });
+}
 
 async function fetchTeamsSessions(date) {
   try {
@@ -390,6 +419,12 @@ function renderTeamsSessions(payload) {
   const sub = document.getElementById("teamsSub");
   if (!root) return;
   const sessions = (payload.sessions || []).slice().reverse();
+  // Index recorded meetings so the calendar list above can show a distress badge.
+  teamsIndex = {};
+  (payload.sessions || []).forEach(s => {
+    teamsIndex[meetingKey(s.title, s.start)] = { score: Math.round(s.distress_score ?? 0), label: s.label };
+  });
+  applyBiomarkerBadges();
   root.innerHTML = "";
   if (!sessions.length) {
     if (sub) sub.textContent = "";

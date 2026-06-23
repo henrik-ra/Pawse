@@ -22,6 +22,9 @@ def main() -> None:
     p = argparse.ArgumentParser(description="Save a finished Teams meeting.")
     p.add_argument("--title", default="Teams meeting")
     p.add_argument("--duration", type=int, default=30, help="meeting length in minutes")
+    p.add_argument("--date", default=None, help="YYYY-MM-DD (defaults to today)")
+    p.add_argument("--start", default=None, help="HH:MM start time (to match a calendar meeting)")
+    p.add_argument("--end", default=None, help="HH:MM end time")
     p.add_argument("--distress", type=float, default=None, help="overall 0-100")
     p.add_argument("--fatigue", type=float, default=None)
     p.add_argument("--emotion", type=float, default=None)
@@ -37,14 +40,16 @@ def main() -> None:
         "voice": a.voice if a.voice is not None else random.randint(25, 70),
     }
     distress = a.distress if a.distress is not None else round(sum(bm.values()) / len(bm))
-    start = (now - dt.timedelta(minutes=a.duration)).strftime("%H:%M")
+    date = a.date or now.strftime("%Y-%m-%d")
+    start = a.start or (now - dt.timedelta(minutes=a.duration)).strftime("%H:%M")
+    end = a.end or now.strftime("%H:%M")
 
     session = {
-        "id": f"tm-{now:%Y-%m-%d-%H%M}",
-        "date": now.strftime("%Y-%m-%d"),
+        "id": f"tm-{date}-{start.replace(':', '')}",
+        "date": date,
         "title": a.title,
         "start": start,
-        "end": now.strftime("%H:%M"),
+        "end": end,
         "duration_min": a.duration,
         "distress_score": round(distress),
         "label": label_for(distress),

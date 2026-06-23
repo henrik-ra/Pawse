@@ -1,53 +1,62 @@
 [
   {
-    "id": "tm-2026-06-20-0930",
-    "date": "2026-06-20",
-    "title": "Weekly Sync",
-    "start": "09:30",
-    "end": "10:00",
-    "duration_min": 30,
-    "distress_score": 38,
-    "label": "Low strain",
-    "source": "pawse-app",
-    "biomarkers": {
-      "fatigue": 42,
-      "emotion": 30,
-      "tension": 35,
-      "voice": 28
-    }
-  },
-  {
-    "id": "tm-2026-06-23-1015",
+    "id": "tm-2026-06-23-0930",
     "date": "2026-06-23",
-    "title": "Sprint Planning",
-    "start": "10:15",
-    "end": "10:48",
-    "duration_min": 33,
-    "distress_score": 64,
+    "title": "Project sync",
+    "start": "09:30",
+    "end": "10:30",
+    "duration_min": 60,
+    "distress_score": 45,
     "label": "Medium strain",
     "source": "pawse-app",
-    "biomarkers": {
-      "fatigue": 58,
-      "emotion": 41,
-      "tension": 70,
-      "voice": 52
-    }
+    "biomarkers": { "fatigue": 40, "emotion": 38, "tension": 52, "voice": 44 }
+  },
+  {
+    "id": "tm-2026-06-23-1030",
+    "date": "2026-06-23",
+    "title": "Design review",
+    "start": "10:30",
+    "end": "11:30",
+    "duration_min": 60,
+    "distress_score": 58,
+    "label": "Medium strain",
+    "source": "pawse-app",
+    "biomarkers": { "fatigue": 52, "emotion": 49, "tension": 66, "voice": 55 }
+  },
+  {
+    "id": "tm-2026-06-23-1300",
+    "date": "2026-06-23",
+    "title": "Customer call",
+    "start": "13:00",
+    "end": "14:00",
+    "duration_min": 60,
+    "distress_score": 72,
+    "label": "High strain",
+    "source": "pawse-app",
+    "biomarkers": { "fatigue": 63, "emotion": 70, "tension": 78, "voice": 68 }
   },
   {
     "id": "tm-2026-06-23-1400",
     "date": "2026-06-23",
-    "title": "Client Escalation",
+    "title": "Sprint planning",
     "start": "14:00",
-    "end": "15:00",
+    "end": "15:30",
+    "duration_min": 90,
+    "distress_score": 64,
+    "label": "Medium strain",
+    "source": "pawse-app",
+    "biomarkers": { "fatigue": 68, "emotion": 55, "tension": 70, "voice": 58 }
+  },
+  {
+    "id": "tm-2026-06-23-1600",
+    "date": "2026-06-23",
+    "title": "Stakeholder update",
+    "start": "16:00",
+    "end": "17:00",
     "duration_min": 60,
-    "distress_score": 81,
+    "distress_score": 80,
     "label": "High strain",
     "source": "pawse-app",
-    "biomarkers": {
-      "fatigue": 66,
-      "emotion": 78,
-      "tension": 85,
-      "voice": 74
-    }
+    "biomarkers": { "fatigue": 74, "emotion": 76, "tension": 85, "voice": 72 }
   }
 ]
