@@ -30,6 +30,9 @@ data/.media_state.json
 data/recordings/*
 !data/recordings/README.md
 
+# WorkIQ calendar exports (transient, may contain personal meeting data)
+data/_workiq_*.json
+
 # FER ONNX models (auto-downloaded on first run, ~36 MB)
 voice-analysis/face_analysis/models/
 
