@@ -36,8 +36,10 @@ def _payload(date: str | None) -> dict:
     """Assemble + score the day locally, then keep only the raw signals."""
     scored = build_live_day(date)
     day = scored["data"]
+    # The dashboard reads the cloud's default user ("me"), so upload under that
+    # id by default. Override with PAWSE_USER if you run multi-user.
     return {
-        "user": day.get("user", "me"),
+        "user": os.environ.get("PAWSE_USER", "me"),
         "date": day.get("date"),
         "meetings": day.get("meetings", []),
         "wearable": day.get("wearable", {}),
