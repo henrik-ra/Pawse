@@ -35,14 +35,6 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      - name: Mirror base image into ACR (avoids Docker Hub pull rate limit)
-        run: |
-          az acr import \
-            --name "$ACR_NAME" \
-            --source docker.io/library/python:3.12-slim \
-            --image python:3.12-slim \
-            --force
-
       - name: Build test image in ACR
         run: |
           az acr build \
