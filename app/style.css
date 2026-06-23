@@ -260,6 +260,11 @@ body {
 .chart-box { position: relative; height: 240px; }
 .chart-box.donut { height: 240px; }
 
+/* ===== Pawse Score trend ===== */
+.trend { margin-top: 18px; }
+.trend .chart-box { height: 200px; }
+.trend-empty { margin: 12px 2px 0; font-size: 0.88rem; color: var(--ink-soft); }
+
 /* ===== Schedule (full meeting list) ===== */
 .schedule { margin-top: 18px; }
 .meeting-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }

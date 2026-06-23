@@ -344,6 +344,102 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+// ---- Pawse Score trend (cloud history + local browsing history) ------------
+const HISTORY_KEY = "pawse.history.v1";
+
+function loadLocalHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || {}; }
+  catch (_) { return {}; }
+}
+
+function recordHistory(date, score, label) {
+  if (!date || typeof score !== "number") return;
+  const hist = loadLocalHistory();
+  hist[date] = { date, score, label };
+  const kept = Object.values(hist).sort((a, b) => a.date.localeCompare(b.date)).slice(-60);
+  const out = {};
+  kept.forEach(e => { out[e.date] = e; });
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(out)); } catch (_) {}
+}
+
+function bandColor(s) { return s >= 70 ? "#e8553e" : s >= 40 ? "#f4b740" : "#2ecc71"; }
+function shortDate(iso) {
+  const d = new Date(iso + "T00:00:00");
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+}
+
+async function renderTrend(days = 14) {
+  // Cloud history is authoritative; local browsing history fills the gaps.
+  const merged = loadLocalHistory();
+  try {
+    const res = await fetch(`/api/history?days=${days}`, { cache: "no-store" });
+    if (res.ok) {
+      const body = await res.json();
+      (body.history || []).forEach(e => {
+        if (e.date && typeof e.pawseScore === "number")
+          merged[e.date] = { date: e.date, score: e.pawseScore, label: e.label };
+      });
+    }
+  } catch (_) { /* no cloud backend reachable — local history only */ }
+
+  const points = Object.values(merged)
+    .filter(e => typeof e.score === "number")
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-days);
+
+  const canvas = document.getElementById("trendChart");
+  const empty = document.getElementById("trendEmpty");
+  const sub = document.getElementById("trendSub");
+  if (!canvas) return;
+
+  if (points.length < 2) {
+    destroy("trend");
+    canvas.style.display = "none";
+    if (empty) empty.hidden = false;
+    if (sub) sub.textContent = "";
+    return;
+  }
+  canvas.style.display = "";
+  if (empty) empty.hidden = true;
+
+  const scores = points.map(p => p.score);
+  const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+  if (sub) sub.textContent = `${points.length} days \u00b7 avg ${avg}`;
+
+  destroy("trend");
+  charts.trend = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels: points.map(p => shortDate(p.date)),
+      datasets: [{
+        data: scores,
+        borderColor: "#6c5ce7",
+        backgroundColor: "rgba(108,92,231,0.12)",
+        fill: true,
+        tension: 0.35,
+        pointBackgroundColor: scores.map(bandColor),
+        pointBorderColor: scores.map(bandColor),
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      }],
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          title: c => points[c[0].dataIndex].date,
+          label: c => `Score ${c.parsed.y}` + (points[c.dataIndex].label ? ` \u00b7 ${points[c.dataIndex].label}` : ""),
+        } },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: "#8a918c", maxTicksLimit: 10 } },
+        y: { grid: { color: "#f0ece2" }, ticks: { color: "#8a918c" }, suggestedMin: 0, suggestedMax: 100 },
+      },
+    },
+  });
+}
+
 function renderVoice(voice) {
   const v = voice || {};
   const idx = typeof v.avg_stress_index === "number" ? v.avg_stress_index : null;
@@ -393,7 +489,12 @@ async function fetchDay(date, { silent = false } = {}) {
     const res = await fetch(`/api/live-day?date=${encodeURIComponent(date)}`, { cache: "no-store" });
     if (res.ok) {
       const result = await res.json();
-      if (!result.error) { render(result); return; }
+      if (!result.error) {
+        render(result);
+        recordHistory(date, result.pawse_score ?? result.score, result.label);
+        renderTrend();
+        return;
+      }
     }
     throw new Error("api");
   } catch (_) {

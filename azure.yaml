@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+name: pawse
+metadata:
+  template: pawse-cloud@1.0.0
+
+infra:
+  provider: bicep
+  path: infra
+  module: main
+
+services:
+  api:
+    # Build context is the repo root so the image can include the shared
+    # scoring/ package alongside cloud/.
+    project: .
+    language: python
+    host: containerapp
+    docker:
+      path: cloud/Dockerfile
+      context: .
