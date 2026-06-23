@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pawse Meetings — join</title>
+  <link rel="stylesheet" href="meeting.css" />
+</head>
+<body class="teams">
+  <!-- ===== Pre-join screen ===== -->
+  <section id="prejoin" class="prejoin">
+    <h1>🐼 Join a meeting</h1>
+    <div class="prejoin-grid">
+      <div class="preview">
+        <video id="preview" autoplay muted playsinline></video>
+        <div class="no-cam" id="noCam" hidden>Camera off</div>
+        <div class="preview-controls">
+          <button id="preMic" class="rc" title="Mic">🎤</button>
+          <button id="preCam" class="rc" title="Camera">🎥</button>
+        </div>
+      </div>
+      <div class="prejoin-side">
+        <label for="meetingSelect">Which meeting are you joining?</label>
+        <select id="meetingSelect"></select>
+        <button id="joinBtn" class="btn-primary">Join now</button>
+        <p class="hint">🐼 Pawse measures your biomarkers locally during the call.
+          Nothing is uploaded — after the call you decide whether to save the scores.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== In-call screen ===== -->
+  <section id="incall" class="incall" hidden>
+    <header class="call-top">
+      <span class="call-title" id="callTitle">Meeting</span>
+      <span class="call-timer" id="callTimer">00:00</span>
+      <span class="call-rec">🔴 Pawse capturing biomarkers</span>
+    </header>
+
+    <div class="stage" id="stage"><!-- tiles injected by meeting.js --></div>
+
+    <div class="toolbar">
+      <button id="micBtn" class="tb active"><span>🎤</span><small>Mute</small></button>
+      <button id="camBtn" class="tb active"><span>🎥</span><small>Camera</small></button>
+      <button class="tb" title="Not in this demo"><span>🖥️</span><small>Share</small></button>
+      <button class="tb" title="Not in this demo"><span>👥</span><small>People</small></button>
+      <button class="tb" title="Not in this demo"><span>💬</span><small>Chat</small></button>
+      <button id="leaveBtn" class="tb leave"><span>📞</span><small>Leave</small></button>
+    </div>
+  </section>
+
+  <!-- ===== Leave dialog ===== -->
+  <div id="leaveDialog" class="dialog-backdrop" hidden>
+    <div class="dialog" role="dialog" aria-modal="true">
+      <h2>Save your biomarkers?</h2>
+      <p>You finished “<span id="dlgTitle">the meeting</span>”. Save the recorded
+        biomarkers to your Pawse dashboard?</p>
+      <div class="dlg-stats" id="dlgStats"></div>
+      <div class="dlg-actions">
+        <button id="discardBtn" class="btn-ghost">Discard</button>
+        <button id="saveBtn" class="btn-primary">Save &amp; view dashboard</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="meeting.js"></script>
+</body>
+</html>
