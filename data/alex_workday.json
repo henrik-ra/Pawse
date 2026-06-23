@@ -17,6 +17,10 @@
     "source": "fitbit",
     "steps": 700,
     "resting_hr": 62,
+    "hrv": 31,
+    "spo2": 95,
+    "sleep_hours": 5.8,
+    "active_minutes": 12,
     "hr_samples": [
       { "time": "09:30", "bpm": 78 },
       { "time": "10:30", "bpm": 96 },
@@ -38,7 +42,7 @@
     "notes": "Elevated pitch variability and reduced pauses in afternoon meetings."
   },
   "expected_outcome": {
-    "pawse_score": 82,
+    "pawse_score": 73,
     "label": "High strain"
   }
 }
