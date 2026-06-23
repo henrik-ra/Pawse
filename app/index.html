@@ -93,6 +93,21 @@
     <!-- ===== KPI tiles ===== -->
     <section class="tiles" id="tiles"><!-- filled by app.js --></section>
 
+    <!-- ===== Pawse Score trend (cloud history) ===== -->
+    <section class="trend">
+      <article class="card chart-card chart-wide">
+        <header class="chart-head">
+          <h3>📈 Pawse Score · recent days</h3>
+          <span class="chart-sub" id="trendSub"></span>
+        </header>
+        <div class="chart-box"><canvas id="trendChart"></canvas></div>
+        <p class="trend-empty" id="trendEmpty" hidden>
+          No history yet — browse a few days, or deploy the cloud backend and
+          upload days to build your trend. 🐼
+        </p>
+      </article>
+    </section>
+
     <!-- ===== Charts ===== -->
     <section class="charts">
       <article class="card chart-card chart-wide">
