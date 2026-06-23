@@ -101,6 +101,18 @@ body {
 .mode.live { background: rgba(46, 204, 113, 0.18); color: #5be59a; }
 .mode.demo { background: rgba(255, 255, 255, 0.14); color: #ddd; }
 
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.updated {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+}
+
 /* ===== Layout ===== */
 .page {
   max-width: 1180px;

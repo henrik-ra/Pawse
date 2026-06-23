@@ -1,4 +1,4 @@
-"""Shared helpers for the Redmi backends.
+"""Shared helpers for the Xiaomi backends.
 
 Every backend returns the same normalised signal dict that the rest of Pawse
 expects (see ``devices/README.md``). This module centralises the demo payload

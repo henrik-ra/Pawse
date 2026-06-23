@@ -58,7 +58,7 @@ function render(result) {
   const score = result.pawse_score ?? result.score ?? 0;
   const label = result.label || labelFor(score);
 
-  showMode(result.mode || w.mode || "demo");
+  showMode(result.mode || w.mode || "demo", w.source || data.source);
   renderHero(score, label, data, w);
   renderTiles(w, data);
   renderHrChart(w);
@@ -69,6 +69,7 @@ function render(result) {
   fillList("reasons", result.reasons || []);
   fillList("recommendations", result.recommendations || []);
   renderVoice(data.voice);
+  showUpdated();
 }
 
 function moodClass(score) { return score >= 70 ? "mood-bad" : score >= 40 ? "mood-med" : "mood-good"; }
@@ -360,10 +361,38 @@ function fillList(id, items) {
 }
 
 // ---- Mode badge & date header ---------------------------------------------
-function showMode(mode) {
+// Map a backend `source` string to a friendly device name for the badge.
+function deviceLabel(source) {
+  const s = String(source || "").toLowerCase();
+  if (!s) return "";
+  if (s.startsWith("xiaomi") || s.includes("redmi") || s.includes("gadgetbridge")) return "Xiaomi Watch";
+  if (s.includes("fitbit")) return "Fitbit";
+  if (s.includes("apple")) return "Apple Watch";
+  if (s.includes("google")) return "Google Health";
+  // Fallback: prettify the raw source (e.g. "garmin-connect" -> "Garmin Connect").
+  return s.replace(/[-_]+/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function showMode(mode, source) {
   const el = document.getElementById("mode");
-  if (mode === "live") { el.textContent = "● LIVE (Fitbit)"; el.className = "mode live"; }
-  else { el.textContent = "○ Demo data"; el.className = "mode demo"; }
+  const device = deviceLabel(source);
+  if (mode === "live") {
+    el.textContent = device ? `● LIVE · ${device}` : "● LIVE";
+    el.className = "mode live";
+  } else {
+    el.textContent = device ? `○ Demo · ${device}` : "○ Demo data";
+    el.className = "mode demo";
+  }
+}
+
+// Stamp the header with the time of the latest successful data load so you can
+// see at a glance how fresh the near-real-time view is.
+function showUpdated() {
+  const el = document.getElementById("updated");
+  if (!el) return;
+  const now = new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  el.textContent = `updated ${now}`;
+  el.hidden = false;
 }
 
 function prettyDate(iso) {

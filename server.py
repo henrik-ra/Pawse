@@ -30,11 +30,11 @@ from devices.outlook.calendar_client import get_meetings
 from scoring.pawse_score import score_day
 
 # Pick the wearable source. Defaults to Google Health (Fitbit / Pixel Watch);
-# set PAWSE_WEARABLE=redmi to read a Redmi/Xiaomi watch instead. The chosen
+# set PAWSE_WEARABLE=xiaomi to read a Xiaomi watch instead. The chosen
 # module just has to expose get_daily_signals(date) + prewarm().
 _WEARABLE = (os.environ.get("PAWSE_WEARABLE") or "google-health").strip().lower()
-if _WEARABLE in ("redmi", "xiaomi"):
-    from devices.redmi.redmi_client import get_daily_signals, prewarm
+if _WEARABLE == "xiaomi":
+    from devices.xiaomi.xiaomi_client import get_daily_signals, prewarm
 else:
     from devices.google_health.google_health_client import get_daily_signals, prewarm
 

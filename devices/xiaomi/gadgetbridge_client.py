@@ -1,7 +1,7 @@
-"""Option B — Gadgetbridge SQLite export (most reliable for Xiaomi/Redmi).
+"""Option B — Gadgetbridge SQLite export (most reliable for Xiaomi).
 
 `Gadgetbridge <https://gadgetbridge.org>`_ is an open-source Android app that
-pairs directly with Redmi/Xiaomi watches over Bluetooth — including models with
+pairs directly with Xiaomi watches over Bluetooth — including models with
 the proprietary, authenticated protocol that blocks a raw PC connection. It
 stores every sample in a local SQLite database you can export
 (*Settings → Database management → Export DB*) and copy to this machine.
@@ -14,9 +14,9 @@ Point Pawse at the file with the ``GADGETBRIDGE_DB`` env var, or drop it next to
 this script as ``Gadgetbridge.db``.
 
 CLI:
-    python devices/redmi/gadgetbridge_client.py                 # today
-    python devices/redmi/gadgetbridge_client.py 2026-06-18      # a specific day
-    python devices/redmi/gadgetbridge_client.py --tables        # inspect schema
+    python devices/xiaomi/gadgetbridge_client.py                 # today
+    python devices/xiaomi/gadgetbridge_client.py 2026-06-18      # a specific day
+    python devices/xiaomi/gadgetbridge_client.py --tables        # inspect schema
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ try:  # works as a package import and as a direct script
 except ImportError:
     from _common import demo_signals, enrich
 
-SOURCE = "redmi-gadgetbridge"
+SOURCE = "xiaomi-gadgetbridge"
 
 _HERE = Path(__file__).resolve().parent
 _DEFAULT_DB = _HERE / "Gadgetbridge.db"

@@ -15,11 +15,8 @@ devices/google_health/.env
 devices/google_health/google_health_cache.json
 .env
 
-# Redmi / Xiaomi watch — secrets, tokens, exports & local DBs
-devices/redmi/.env
-devices/redmi/zepp_tokens.json
-devices/redmi/Gadgetbridge.db
-devices/redmi/mi_fitness_export/
+# Xiaomi watch — local Gadgetbridge database export
+data/gadgetbridge-db/Gadgetbridge.db
 
 # Calendar cache — contains real meeting titles; commit only the .sample file
 data/calendar_cache.json
