@@ -114,11 +114,11 @@ def analyze_recording(path: str | Path, date_override: str | None = None) -> dic
                 "note": "no audio backend — run: pip install imageio-ffmpeg",
             }
 
-        arousal = voice.get("stress_index")
-        face = analyze_face(path if ext in VIDEO_EXTS else None, voice_arousal=arousal)
+        # Facial expression is analysed from the actual video frames, never voice.
+        face = analyze_face(path if ext in VIDEO_EXTS else None)
     except (AudioExtractionUnavailable, FileNotFoundError) as exc:
         voice = {"source": "error", "stress_index": None, "note": str(exc)}
-        face = analyze_face(None, voice_arousal=None)
+        face = analyze_face(None)
     finally:
         if tmp_wav is not None and tmp_wav.exists():
             try:

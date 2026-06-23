@@ -30,6 +30,9 @@ data/.media_state.json
 data/recordings/*
 !data/recordings/README.md
 
+# FER ONNX models (auto-downloaded on first run, ~36 MB)
+voice-analysis/face_analysis/models/
+
 # OS / editor
 .DS_Store
 .idea/
