@@ -20,14 +20,23 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import os
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from devices.google_health.google_health_client import get_daily_signals, prewarm
 from devices.outlook.calendar_client import get_meetings
 from scoring.pawse_score import score_day
+
+# Pick the wearable source. Defaults to Google Health (Fitbit / Pixel Watch);
+# set PAWSE_WEARABLE=redmi to read a Redmi/Xiaomi watch instead. The chosen
+# module just has to expose get_daily_signals(date) + prewarm().
+_WEARABLE = (os.environ.get("PAWSE_WEARABLE") or "google-health").strip().lower()
+if _WEARABLE in ("redmi", "xiaomi"):
+    from devices.redmi.redmi_client import get_daily_signals, prewarm
+else:
+    from devices.google_health.google_health_client import get_daily_signals, prewarm
 
 _ROOT = Path(__file__).resolve().parent
 _APP_DIR = _ROOT / "app"
