@@ -1,7 +1,13 @@
 # Pawse API container image.
 # Build context is the repo root (see azure.yaml) so we can pull in the shared
 # scoring/ package next to the cloud/ service code.
-FROM python:3.12-slim
+#
+# BASE_IMAGE defaults to Docker Hub for local builds. In CI we override it with
+# the ACR-mirrored copy (az acr import) so the build pulls the base image
+# authenticated from our own registry and never hits Docker Hub's anonymous
+# pull rate limit.
+ARG BASE_IMAGE=python:3.12-slim
+FROM ${BASE_IMAGE}
 
 WORKDIR /app
 
