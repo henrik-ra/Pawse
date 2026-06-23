@@ -21,8 +21,8 @@
       microsoftTeams.pages.config.registerOnSaveHandler(function (saveEvent) {
         microsoftTeams.pages.config.setConfig({
           entityId: "pawse-capture",
-          contentUrl: window.location.origin + "/teamsapp/index.html",
-          websiteUrl: window.location.origin + "/teamsapp/index.html",
+          contentUrl: window.location.origin + "/teamsapp/meetingpanel.html",
+          websiteUrl: window.location.origin + "/teamsapp/meetingpanel.html",
           suggestedDisplayName: "Pawse",
         }).then(function () { saveEvent.notifySuccess(); });
       });

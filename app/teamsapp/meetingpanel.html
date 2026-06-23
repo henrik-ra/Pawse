@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pawse · in-call</title>
+  <script src="https://res.cdn.office.net/teams-js/2.24.0/js/MicrosoftTeams.min.js" crossorigin="anonymous"></script>
+  <style>
+    :root { --good:#3fa34d; --warn:#e8a13a; --bad:#c4314b; --ink:#1f2421; --muted:#6b726e; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Segoe UI",system-ui,sans-serif; color:var(--ink); background:#faf9f8; }
+    .panel { padding:12px; }
+    .phead { display:flex; align-items:center; gap:8px; font-weight:700; margin-bottom:8px; }
+    .st { margin-left:auto; font-size:.72rem; font-weight:600; color:#fff; background:var(--good); border-radius:10px; padding:2px 8px; }
+    .cam { position:relative; width:100%; aspect-ratio:4/3; background:#000; border-radius:12px; overflow:hidden; }
+    .cam video, .cam canvas { position:absolute; inset:0; width:100%; height:100%; }
+    .cam video { object-fit:cover; transform:scaleX(-1); }
+    .cam canvas { transform:scaleX(-1); }
+    .score { display:flex; align-items:baseline; gap:6px; margin:10px 2px 6px; }
+    .score #distress { font-size:2rem; font-weight:800; line-height:1; }
+    .score small { color:var(--muted); }
+    .bars { display:grid; gap:7px; margin:6px 0 10px; }
+    .row { display:flex; align-items:center; gap:8px; font-size:.74rem; }
+    .row .lbl { width:64px; color:var(--muted); }
+    .row .bar { flex:1; height:6px; border-radius:4px; background:#eceeec; overflow:hidden; }
+    .row .bar i { display:block; height:100%; }
+    .row .val { width:22px; text-align:right; font-weight:700; }
+    .note { font-size:.72rem; color:var(--muted); margin:6px 2px; min-height:1.2em; }
+    .primary { width:100%; background:#6264a7; color:#fff; border:none; border-radius:9px; padding:10px; font-weight:600; cursor:pointer; }
+    .primary:hover { background:#4f5193; }
+    .saved { color:var(--good); font-weight:700; }
+  </style>
+</head>
+<body class="panel">
+  <div class="phead">🐼 Pawse <span class="st" id="pstatus">starting…</span></div>
+  <div class="cam"><video id="video" autoplay muted playsinline></video><canvas id="overlay"></canvas></div>
+  <div class="score"><span id="distress">–</span><small>/100 distress</small></div>
+  <div class="bars" id="bars"></div>
+  <p class="note" id="note">Pawse measures your wellbeing locally during this call.</p>
+  <button id="saveBtn" class="primary">Save &amp; finish</button>
+  <script type="module" src="meetingpanel.js"></script>
+</body>
+</html>
