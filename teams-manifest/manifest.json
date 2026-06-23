@@ -26,14 +26,14 @@
     {
       "entityId": "pawse-capture",
       "name": "Pawse",
-      "contentUrl": "http://localhost:8000/teamsapp/index.html",
-      "websiteUrl": "http://localhost:8000/teamsapp/index.html",
+      "contentUrl": "https://pursue-psp-internet-stand.trycloudflare.com/teamsapp/index.html",
+      "websiteUrl": "https://pursue-psp-internet-stand.trycloudflare.com/teamsapp/index.html",
       "scopes": ["personal"]
     }
   ],
   "configurableTabs": [
     {
-      "configurationUrl": "http://localhost:8000/teamsapp/config.html",
+      "configurationUrl": "https://pursue-psp-internet-stand.trycloudflare.com/teamsapp/config.html",
       "canUpdateConfiguration": true,
       "scopes": ["groupChat"],
       "context": ["meetingSidePanel", "meetingChatTab", "meetingDetailsTab"]
@@ -42,7 +42,7 @@
   "permissions": ["identity", "messageTeamMembers"],
   "devicePermissions": ["media"],
   "validDomains": [
-    "localhost:8000",
+    "pursue-psp-internet-stand.trycloudflare.com",
     "cdn.jsdelivr.net",
     "storage.googleapis.com",
     "res.cdn.office.net"
