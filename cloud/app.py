@@ -111,6 +111,15 @@ class WorkdayIn(BaseModel):
     breaks: Breaks = Field(default_factory=Breaks)
 
 
+class MediaSignalsIn(BaseModel):
+    """Retrospective voice/face signals from a meeting recording (edge agent)."""
+    model_config = ConfigDict(extra="allow")
+    user: str = "me"
+    date: str | None = None
+    voice: dict[str, Any] | None = None
+    face: dict[str, Any] | None = None
+
+
 # --- Helpers ----------------------------------------------------------------
 
 def _today() -> str:
@@ -194,7 +203,49 @@ def ingest_day(
     payload["date"] = date
     payload.setdefault("wearable", {}).setdefault("mode", "live")
     payload.setdefault("calendar_source", "ingested")
+
+    # Preserve any retrospective media signals already attached to this day so a
+    # later wearable/calendar upload does not wipe the recording analysis.
+    prev = pawse_store.get_day(payload.get("user", "me"), date)
+    if prev:
+        prev_data = prev.get("data", {})
+        for key in ("voice", "face"):
+            if key not in payload and prev_data.get(key):
+                payload[key] = prev_data[key]
+
     return _score_and_store(payload, payload.get("user", "me"), date)
+
+
+@app.post("/api/days/media")
+def ingest_media(
+    media: MediaSignalsIn,
+    x_api_key: str | None = Header(default=None),
+) -> dict[str, Any]:
+    """Merge voice/face signals from a recording into a day (augments the dashboard).
+
+    Reads the stored day (creating a demo day if none exists yet), folds in the
+    voice/face signals and re-stores it — wearable and calendar data are kept.
+    """
+    _require_api_key(x_api_key)
+    user = media.user or "me"
+    date = media.date or _today()
+
+    stored = pawse_store.get_day(user, date)
+    if stored is None:
+        stored = _score_and_store(_demo_day(user, date), user, date)
+
+    data = stored.setdefault("data", {})
+    signals = stored.setdefault("signals", {})
+    if media.voice:
+        data["voice"] = media.voice
+        signals["voice"] = media.voice
+    if media.face:
+        data["face"] = media.face
+        signals["face"] = media.face
+    stored["media_updated_at"] = _dt.datetime.now(_dt.timezone.utc).isoformat()
+
+    pawse_store.upsert_day(user, date, stored)
+    return stored
 
 
 @app.get("/api/history")

@@ -69,6 +69,7 @@ function render(result) {
   fillList("reasons", result.reasons || []);
   fillList("recommendations", result.recommendations || []);
   renderVoice(data.voice);
+  renderFace(data.face);
 }
 
 function moodClass(score) { return score >= 70 ? "mood-bad" : score >= 40 ? "mood-med" : "mood-good"; }
@@ -442,11 +443,47 @@ async function renderTrend(days = 14) {
 
 function renderVoice(voice) {
   const v = voice || {};
-  const idx = typeof v.avg_stress_index === "number" ? v.avg_stress_index : null;
+  const idx = typeof v.avg_stress_index === "number" ? v.avg_stress_index
+            : typeof v.stressIndex === "number" ? v.stressIndex
+            : typeof v.arousal === "number" ? v.arousal : null;
   document.getElementById("voiceFill").style.width = idx === null ? "0%" : `${Math.round(idx * 100)}%`;
   document.getElementById("voiceVal").textContent = idx === null ? "—" : `${Math.round(idx * 100)}%`;
+  const src = (v.source === "wav-numpy" || v.source === "librosa")
+    ? "on-device audio analysis" : (v.source || "");
   document.getElementById("voiceNote").textContent = v.notes ||
-    (idx === null ? "No voice analysis for this day." : "");
+    (idx === null ? "No voice analysis for this day."
+                  : `Voice stress ${Math.round(idx * 100)}%${src ? ` · ${src}` : ""}${v.files ? ` · ${v.files} recording(s)` : ""}`);
+}
+
+function capWord(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
+
+function renderFace(face) {
+  if (!document.getElementById("faceFill")) return;
+  const f = face || {};
+  const neg = typeof f.negativeRatio === "number" ? f.negativeRatio
+            : typeof f.negative_ratio === "number" ? f.negative_ratio : null;
+  document.getElementById("faceFill").style.width = neg === null ? "0%" : `${Math.round(neg * 100)}%`;
+  document.getElementById("faceVal").textContent = f.dominant ? capWord(f.dominant) : "—";
+  const src = (f.source === "fer" || f.source === "onnx-ferplus") ? "facial model"
+            : f.source === "heuristic-from-voice" ? "estimated from voice"
+            : "no video analysis";
+  document.getElementById("faceNote").textContent = neg === null
+    ? "No facial analysis for this day."
+    : `${Math.round(neg * 100)}% tension · ${src}${f.files ? ` · ${f.files} clip(s)` : ""}`;
+
+  const root = document.getElementById("faceEmotions");
+  if (root) {
+    root.innerHTML = "";
+    Object.entries(f.emotions || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .forEach(([k, val]) => {
+        const chip = document.createElement("span");
+        chip.className = "emo-chip";
+        chip.textContent = `${capWord(k)} ${Math.round((val || 0) * 100)}%`;
+        root.appendChild(chip);
+      });
+  }
 }
 
 function fillList(id, items) {
