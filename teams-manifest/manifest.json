@@ -5,9 +5,9 @@
   "id": "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
   "developer": {
     "name": "Pawse Hackathon Team",
-    "websiteUrl": "http://localhost:8000",
-    "privacyUrl": "http://localhost:8000/teamsapp/index.html",
-    "termsOfUseUrl": "http://localhost:8000/teamsapp/index.html"
+    "websiteUrl": "https://github.com/henrik-ra/Pawse",
+    "privacyUrl": "https://github.com/henrik-ra/Pawse",
+    "termsOfUseUrl": "https://github.com/henrik-ra/Pawse"
   },
   "name": {
     "short": "Pawse",
@@ -36,7 +36,7 @@
       "configurationUrl": "http://localhost:8000/teamsapp/config.html",
       "canUpdateConfiguration": true,
       "scopes": ["groupChat"],
-      "context": ["meetingSidePanel", "meetingChatTab", "meetingDetailsTab", "meetingStage"]
+      "context": ["meetingSidePanel", "meetingChatTab", "meetingDetailsTab"]
     }
   ],
   "permissions": ["identity", "messageTeamMembers"],
