@@ -358,7 +358,77 @@ function fillList(id, items) {
   ul.innerHTML = "";
   (items.length ? items : ["—"]).forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
 }
+// ---- Teams meeting biomarkers (Pawse app) ---------------------------------
+function distressColor(s) { return s >= 70 ? "#e8553e" : s >= 40 ? "#f4b740" : "#3fa34d"; }
 
+async function fetchTeamsSessions(date) {
+  try {
+    const res = await fetch(`/api/teams-sessions?date=${encodeURIComponent(date)}`, { cache: "no-store" });
+    if (res.ok) { const p = await res.json(); if (!p.error) { renderTeamsSessions(p); return; } }
+    throw new Error("api");
+  } catch (_) {
+    // Static fallback (no backend): read the bundled sessions file directly.
+    try {
+      const res = await fetch("../data/teams_sessions.json", { cache: "no-store" });
+      const all = await res.json();
+      const shown = (all || []).filter(s => s.date === date);
+      const list = shown.length ? shown : (all || []).slice(-5);
+      renderTeamsSessions({ sessions: list, is_fallback: !shown.length, summary: { count: list.length } });
+    } catch (e) { renderTeamsSessions({ sessions: [] }); }
+  }
+}
+
+const BIOMARKERS = [
+  ["fatigue", "Fatigue", "#6c5ce7"],
+  ["emotion", "Emotion", "#ef5777"],
+  ["tension", "Tension", "#e8553e"],
+  ["voice", "Voice", "#4a90d9"],
+];
+
+function renderTeamsSessions(payload) {
+  const root = document.getElementById("teamsSessions");
+  const sub = document.getElementById("teamsSub");
+  if (!root) return;
+  const sessions = (payload.sessions || []).slice().reverse();
+  root.innerHTML = "";
+  if (!sessions.length) {
+    if (sub) sub.textContent = "";
+    const li = document.createElement("li");
+    li.className = "meeting-empty";
+    li.textContent = "No recorded meetings yet \u2014 finish a Teams call to see it here \ud83d\udc3c";
+    root.appendChild(li);
+    return;
+  }
+  if (sub) {
+    const sm = payload.summary || {};
+    sub.textContent = `${sessions.length} meeting${sessions.length > 1 ? "s" : ""}` +
+      (sm.avg_distress != null ? ` \u00b7 avg distress ${sm.avg_distress}` : "") +
+      (payload.is_fallback ? " \u00b7 most recent" : "");
+  }
+  sessions.forEach((s, i) => {
+    const score = Math.round(s.distress_score ?? 0);
+    const bm = s.biomarkers || {};
+    const bars = BIOMARKERS.map(([k, lab, c]) => {
+      const v = Math.max(0, Math.min(100, Math.round(bm[k] ?? 0)));
+      return `<span class="bm"><span class="bm-label">${lab}</span>` +
+        `<span class="bm-bar"><i style="width:${v}%;background:${c}"></i></span>` +
+        `<span class="bm-val">${v}</span></span>`;
+    }).join("");
+    const li = document.createElement("li");
+    li.className = "meeting-row teams-row";
+    li.style.animationDelay = `${i * 40}ms`;
+    li.innerHTML = `
+      <span class="m-time"><strong>${escapeHtml(s.start || "")}</strong><span>${escapeHtml(s.end || "")}</span></span>
+      <span class="m-main">
+        <span class="m-title">${escapeHtml(s.title || "Teams meeting")}
+          <span class="distress-chip" style="background:${distressColor(score)}">${score}</span>
+        </span>
+        <span class="m-meta">${escapeHtml(s.label || "")}${s.duration_min ? " \u00b7 " + fmtDur(s.duration_min) : ""}</span>
+        <span class="bm-grid">${bars}</span>
+      </span>`;
+    root.appendChild(li);
+  });
+}
 // ---- Mode badge & date header ---------------------------------------------
 function showMode(mode) {
   const el = document.getElementById("mode");
@@ -386,6 +456,7 @@ function updateDayHeader() {
 async function fetchDay(date, { silent = false } = {}) {
   state.date = date;
   updateDayHeader();
+  fetchTeamsSessions(date);
   let overlayTimer = null;
   if (!silent) overlayTimer = setTimeout(() => { document.getElementById("loading").hidden = false; }, 220);
 

@@ -28,6 +28,7 @@ from typing import Any
 from devices.google_health.google_health_client import get_daily_signals, prewarm
 from devices.outlook.calendar_client import get_meetings
 from scoring.pawse_score import score_day
+from teams_sessions import save_session, sessions_for
 
 _ROOT = Path(__file__).resolve().parent
 _APP_DIR = _ROOT / "app"
@@ -69,10 +70,53 @@ def build_live_day(date: str | None = None) -> dict[str, Any]:
 
 class _Handler(SimpleHTTPRequestHandler):
     def do_GET(self):  # noqa: N802 (http.server API)
+        if self.path.startswith("/api/teams-sessions"):
+            self._serve_teams_sessions()
+            return
         if self.path.startswith("/api/live-day"):
             self._serve_live_day()
             return
         super().do_GET()
+
+    def do_POST(self):  # noqa: N802 (http.server API)
+        if self.path.startswith("/api/teams-sessions"):
+            self._save_teams_session()
+            return
+        self._write_json({"error": "not found"}, 404)
+
+    # ----- JSON helper -------------------------------------------------
+    def _write_json(self, payload: Any, status: int = 200) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except (ConnectionError, OSError):
+            pass  # browser navigated away / refreshed mid-response
+
+    # ----- Teams meeting biomarker sessions ----------------------------
+    def _serve_teams_sessions(self) -> None:
+        try:
+            date = None
+            if "?" in self.path:
+                from urllib.parse import parse_qs, urlparse
+
+                date = parse_qs(urlparse(self.path).query).get("date", [None])[0]
+            self._write_json(sessions_for(date), 200)
+        except Exception as exc:
+            self._write_json({"error": str(exc)}, 500)
+
+    def _save_teams_session(self) -> None:
+        try:
+            length = int(self.headers.get("Content-Length", 0) or 0)
+            payload = json.loads(self.rfile.read(length) or b"{}")
+            stored = save_session(payload)
+            self._write_json({"ok": True, "session": stored}, 201)
+        except Exception as exc:
+            self._write_json({"error": str(exc)}, 400)
 
     def _serve_live_day(self) -> None:
         try:

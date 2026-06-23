@@ -1,0 +1,53 @@
+[
+  {
+    "id": "tm-2026-06-20-0930",
+    "date": "2026-06-20",
+    "title": "Weekly Sync",
+    "start": "09:30",
+    "end": "10:00",
+    "duration_min": 30,
+    "distress_score": 38,
+    "label": "Low strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 42,
+      "emotion": 30,
+      "tension": 35,
+      "voice": 28
+    }
+  },
+  {
+    "id": "tm-2026-06-23-1015",
+    "date": "2026-06-23",
+    "title": "Sprint Planning",
+    "start": "10:15",
+    "end": "10:48",
+    "duration_min": 33,
+    "distress_score": 64,
+    "label": "Medium strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 58,
+      "emotion": 41,
+      "tension": 70,
+      "voice": 52
+    }
+  },
+  {
+    "id": "tm-2026-06-23-1400",
+    "date": "2026-06-23",
+    "title": "Client Escalation",
+    "start": "14:00",
+    "end": "15:00",
+    "duration_min": 60,
+    "distress_score": 81,
+    "label": "High strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 66,
+      "emotion": 78,
+      "tension": 85,
+      "voice": 74
+    }
+  }
+]

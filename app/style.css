@@ -372,3 +372,41 @@ body {
   .hero-summary { margin-left: auto; margin-right: auto; }
   .hero-meta { justify-content: center; }
 }
+
+/* ===== Teams meeting biomarkers (Pawse app) ===== */
+.distress-chip {
+  display: inline-block;
+  min-width: 24px;
+  text-align: center;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border-radius: 8px;
+  padding: 1px 7px;
+  margin-left: 8px;
+  vertical-align: middle;
+}
+.teams-row .m-main { width: 100%; }
+.bm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px 16px;
+  margin-top: 8px;
+}
+.bm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+.bm-label { width: 56px; }
+.bm-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 4px;
+  background: #eef1ee;
+  overflow: hidden;
+}
+.bm-bar i { display: block; height: 100%; border-radius: 4px; }
+.bm-val { width: 22px; text-align: right; font-weight: 700; color: var(--ink); }
