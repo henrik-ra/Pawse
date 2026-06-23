@@ -99,5 +99,21 @@
     },
     "source": "pawse-teams-incall",
     "label": "Low strain"
+  },
+  {
+    "date": "2026-06-23",
+    "title": "Teams meeting",
+    "start": "18:56",
+    "end": "18:56",
+    "duration_min": 1,
+    "distress_score": 27,
+    "biomarkers": {
+      "fatigue": 57,
+      "emotion": 4,
+      "tension": 29,
+      "voice": 0
+    },
+    "source": "pawse-teams-incall",
+    "label": "Low strain"
   }
 ]
