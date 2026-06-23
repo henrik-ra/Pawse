@@ -36,6 +36,37 @@ It turns invisible stress into clear insights and one protective action:
 
 ---
 
+## 🏗️ Architecture — Edge · Cloud · Clients
+
+Pawse runs across **three tiers**. All secrets, tokens and heavy work stay on the
+**edge** (your machine); the **cloud** is a small, keyless store-and-serve layer;
+the pet and dashboard are thin **read-only clients**.
+
+```mermaid
+flowchart LR
+  subgraph EDGE["🖥️ Edge (your machine)"]
+    A["Calendar sync + Wearable (Fitbit/Google)<br/>build_day() + score_day()"]
+  end
+  A -->|"POST /api/days"| C
+  subgraph CLOUD["☁️ Azure (keyless)"]
+    C["Container App: FastAPI + dashboard"] --> D[("Cosmos DB")]
+  end
+  C --> P["🐼 Desktop Pet"]
+  C --> W["🖥️ Dashboard"]
+```
+
+- **Cloud** holds **no secrets** — only scores. It is deployed to Azure Container
+  Apps + Cosmos (serverless, Managed Identity, no keys) and **auto-deploys on
+  every push to `main`** via GitHub Actions (OIDC).
+- **Edge agent** holds all OAuth tokens and media, collects + scores the day, and
+  pushes it with [`tools/upload_day.py`](tools/upload_day.py) → `POST /api/days`.
+- **Desktop pet** reads the **cloud** API (`PAWSE_API_URL`), so it works even when
+  your local server is off.
+
+> Full detail: [`docs/azure-architecture.md`](docs/azure-architecture.md) → *Implemented Architecture*.
+
+---
+
 ## 📁 Project structure
 
 | Folder | Purpose |
@@ -45,6 +76,10 @@ It turns invisible stress into clear insights and one protective action:
 | [`app/`](app/) | **Task 3** — Panda dashboard (score, charts, panda, actions) |
 | [`devices/`](devices/) | **Core** — Live wearable data (Fitbit, Apple Watch, Google Health) |
 | [`voice-analysis/`](voice-analysis/) | Teams video → voice biomarkers (stress index) |
+| [`cloud/`](cloud/) | **Cloud** — FastAPI service + Cosmos store (serves the dashboard same-origin) |
+| [`infra/`](infra/) | **Cloud** — Bicep IaC (Container Apps, Cosmos, Managed Identity, ACR, App Insights) |
+| [`tools/`](tools/) | **Edge** — local collector that scores the day and uploads it to the cloud |
+| [`desktop/`](desktop/) | Desktop panda pet (reads the cloud API) |
 | [`docs/`](docs/) | Architecture, product vision, ML roadmap, prior art |
 
 ---
