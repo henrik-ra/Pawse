@@ -2,7 +2,7 @@
 // Auto-starts measuring YOUR biomarkers when opened in a Teams call, and auto-saves
 // to the dashboard when the call/panel closes (plus a manual "Save & finish").
 
-import { FaceLandmarker, FilesetResolver, DrawingUtils } from "./vendor/tasks-vision/vision_bundle.js";
+import { FaceLandmarker, FilesetResolver } from "./vendor/tasks-vision/vision_bundle.js";
 
 const MODEL = "./vendor/tasks-vision/face_landmarker.task";
 const WASM = "./vendor/tasks-vision/wasm";
@@ -20,7 +20,7 @@ const setStatus = (t, col) => { const e = $("pstatus"); e.textContent = t; if (c
 const dcolor = s => s >= 60 ? "#c4314b" : s >= 35 ? "#e8a13a" : "#3fa34d";
 
 const S = {
-  lm: null, video: $("video"), canvas: $("overlay"), ctx: null, draw: null,
+  lm: null, video: $("video"), canvas: $("overlay"), ctx: null,
   previewing: false, capturing: false, lastT: -1,
   earOpen: 0.3, earS: [], calib: 0, closed: 0, blinks: 0, log: [], yawnAt: null, yawns: 0, yawnLogged: false,
   smooth: 0, live: { fatigue: 0, emotion: 0, tension: 0, voice: 0 },
@@ -133,7 +133,7 @@ function loop() {
     const face = analyze(res, v.videoWidth, v.videoHeight, performance.now());
     const d = Math.round(fuse(face));
     S.ctx.clearRect(0, 0, S.canvas.width, S.canvas.height);
-    if (face) S.draw.drawConnectors(face.pts, FaceLandmarker.FACE_LANDMARKS_TESSELATION, { color: dcolor(d) + "66", lineWidth: 1 });
+    if (face) drawMesh(face.pts, dcolor(d));
     renderBars();
     $("distress").textContent = face && face.calibrating ? "…" : d;
     if (S.capturing && (!face || !face.calibrating)) setStatus("recording", dcolor(d));
@@ -183,8 +183,15 @@ window.addEventListener("beforeunload", autoSave);
 document.addEventListener("visibilitychange", () => { if (document.hidden) autoSave(); });
 
 // ---------- Boot ----------
+function drawMesh(pts, col) {
+  const w = S.canvas.width, h = S.canvas.height;
+  S.ctx.fillStyle = col;
+  for (let i = 0; i < pts.length; i += 3) S.ctx.fillRect(pts[i].x * w, pts[i].y * h, 1.6, 1.6);
+  S.ctx.strokeStyle = col; S.ctx.lineWidth = 4; S.ctx.strokeRect(2, 2, w - 4, h - 4);
+}
+
 async function main() {
-  S.ctx = S.canvas.getContext("2d"); S.draw = new DrawingUtils(S.ctx);
+  S.ctx = S.canvas.getContext("2d");
   $("saveBtn").addEventListener("click", saveAndFinish);
   initTeams();
   try {
