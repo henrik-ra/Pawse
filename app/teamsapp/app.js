@@ -5,7 +5,7 @@
 // Saves the averaged session to the Pawse dashboard (/api/teams-sessions).
 
 import {
-  FaceLandmarker, FilesetResolver, DrawingUtils,
+  FaceLandmarker, FilesetResolver,
 } from "./vendor/tasks-vision/vision_bundle.js";
 
 const MODEL = "./vendor/tasks-vision/face_landmarker.task";
@@ -23,7 +23,7 @@ const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 const S = {
-  landmarker: null, video: $("video"), canvas: $("overlay"), ctx: null, draw: null,
+  landmarker: null, video: $("video"), canvas: $("overlay"), ctx: null,
   running: false, lastVideoTime: -1,
   // fatigue
   earOpen: 0.3, earSamples: [], calibFrames: 0, closedFrames: 0, blinks: 0,
@@ -237,8 +237,10 @@ function drawMesh(face, distress) {
   ctx.clearRect(0, 0, S.canvas.width, S.canvas.height);
   if (!face) return;
   const col = distressColor(distress);
-  S.draw.drawConnectors(face.pts, FaceLandmarker.FACE_LANDMARKS_TESSELATION,
-    { color: col + "66", lineWidth: 1 });
+  const w = S.canvas.width, h = S.canvas.height;
+  ctx.fillStyle = col;
+  for (let i = 0; i < face.pts.length; i += 3) ctx.fillRect(face.pts[i].x * w, face.pts[i].y * h, 1.6, 1.6);
+  ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.strokeRect(2, 2, w - 4, h - 4);
 }
 
 function loop() {
@@ -354,7 +356,6 @@ function switchView(view) {
 // ---------------- Boot ----------------
 async function main() {
   S.ctx = S.canvas.getContext("2d");
-  S.draw = new DrawingUtils(S.ctx);
   document.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
   $("startBtn").addEventListener("click", beginCapture);
   $("saveBtn").addEventListener("click", saveAndShow);

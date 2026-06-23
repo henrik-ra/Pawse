@@ -9,7 +9,12 @@
     "distress_score": 45,
     "label": "Medium strain",
     "source": "pawse-app",
-    "biomarkers": { "fatigue": 40, "emotion": 38, "tension": 52, "voice": 44 }
+    "biomarkers": {
+      "fatigue": 40,
+      "emotion": 38,
+      "tension": 52,
+      "voice": 44
+    }
   },
   {
     "id": "tm-2026-06-23-1030",
@@ -21,7 +26,12 @@
     "distress_score": 58,
     "label": "Medium strain",
     "source": "pawse-app",
-    "biomarkers": { "fatigue": 52, "emotion": 49, "tension": 66, "voice": 55 }
+    "biomarkers": {
+      "fatigue": 52,
+      "emotion": 49,
+      "tension": 66,
+      "voice": 55
+    }
   },
   {
     "id": "tm-2026-06-23-1300",
@@ -33,7 +43,12 @@
     "distress_score": 72,
     "label": "High strain",
     "source": "pawse-app",
-    "biomarkers": { "fatigue": 63, "emotion": 70, "tension": 78, "voice": 68 }
+    "biomarkers": {
+      "fatigue": 63,
+      "emotion": 70,
+      "tension": 78,
+      "voice": 68
+    }
   },
   {
     "id": "tm-2026-06-23-1400",
@@ -45,7 +60,12 @@
     "distress_score": 64,
     "label": "Medium strain",
     "source": "pawse-app",
-    "biomarkers": { "fatigue": 68, "emotion": 55, "tension": 70, "voice": 58 }
+    "biomarkers": {
+      "fatigue": 68,
+      "emotion": 55,
+      "tension": 70,
+      "voice": 58
+    }
   },
   {
     "id": "tm-2026-06-23-1600",
@@ -57,6 +77,27 @@
     "distress_score": 80,
     "label": "High strain",
     "source": "pawse-app",
-    "biomarkers": { "fatigue": 74, "emotion": 76, "tension": 85, "voice": 72 }
+    "biomarkers": {
+      "fatigue": 74,
+      "emotion": 76,
+      "tension": 85,
+      "voice": 72
+    }
+  },
+  {
+    "date": "2026-06-23",
+    "title": "Teams meeting",
+    "start": "18:54",
+    "end": "18:54",
+    "duration_min": 1,
+    "distress_score": 28,
+    "biomarkers": {
+      "fatigue": 60,
+      "emotion": 4,
+      "tension": 32,
+      "voice": 0
+    },
+    "source": "pawse-teams-incall",
+    "label": "Low strain"
   }
 ]
