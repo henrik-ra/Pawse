@@ -28,7 +28,7 @@ from pathlib import Path
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from scoring.pawse_score import score_day
 
@@ -77,6 +77,7 @@ def _require_api_key(provided: str | None) -> None:
 # --- Models -----------------------------------------------------------------
 
 class Meeting(BaseModel):
+    model_config = ConfigDict(extra="allow")
     title: str = "Meeting"
     start: str
     end: str
@@ -85,6 +86,11 @@ class Meeting(BaseModel):
 
 
 class Wearable(BaseModel):
+    # Keep the keys the scorer relies on, but preserve every extra metric the
+    # local collector computed (calories, distance, hr_avg/max, hr_zones,
+    # steps_by_hour, spo2, hrv, active-zone minutes, …) so the dashboard tiles
+    # render real values instead of blanks.
+    model_config = ConfigDict(extra="allow")
     source: str = "manual"
     steps: int = 0
     resting_hr: int = 60
@@ -92,6 +98,7 @@ class Wearable(BaseModel):
 
 
 class Breaks(BaseModel):
+    model_config = ConfigDict(extra="allow")
     lunch_break: bool = True
     longest_gap_minutes: int = 0
 
