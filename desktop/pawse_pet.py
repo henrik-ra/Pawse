@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import random
 import sys
 import tkinter as tk
@@ -31,7 +32,13 @@ import urllib.request
 from datetime import datetime
 
 # --- Config -----------------------------------------------------------------
-API_URL = "http://localhost:8000/api/live-day"
+# The pet reads the cloud dashboard by default, so it works without a local
+# server. Override with the PAWSE_API_URL environment variable.
+_API_BASE = os.environ.get(
+    "PAWSE_API_URL",
+    "https://ca-pawse-2ysupe36zqlhi---test.redstone-da7928c5.swedencentral.azurecontainerapps.io",
+).rstrip("/")
+API_URL = f"{_API_BASE}/api/live-day"
 DEFAULT_INTERVAL_MIN = 30        # minutes between pop-ups
 VISIBLE_SECONDS = 8              # how long the panda stays on screen
 WORK_HOURS = (8, 20)            # only appear between these local hours
@@ -54,7 +61,7 @@ PANDA_BLACK = "#1b1c1e"
 def fetch_day() -> dict | None:
     """Pull the current scored day from the Pawse server (None if unreachable)."""
     try:
-        with urllib.request.urlopen(API_URL, timeout=4) as resp:
+        with urllib.request.urlopen(API_URL, timeout=8) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except Exception:
         return None
@@ -149,7 +156,7 @@ class PawsePet:
     # scheduling -------------------------------------------------------------
     def start(self, show_now: bool):
         delay = 1500 if show_now else 4000
-        self.root.after(delay, self.show_once)
+        self.root.after(delay, lambda: self.show_once(force=show_now))
         self._schedule_next()
         self.root.mainloop()
 
@@ -163,12 +170,13 @@ class PawsePet:
         self._schedule_next()
 
     # popup ------------------------------------------------------------------
-    def show_once(self):
+    def show_once(self, force: bool = False):
         if self._popup is not None:
             return
-        hour = datetime.now().hour
-        if not (WORK_HOURS[0] <= hour < WORK_HOURS[1]):
-            return
+        if not force:
+            hour = datetime.now().hour
+            if not (WORK_HOURS[0] <= hour < WORK_HOURS[1]):
+                return
         day = fetch_day()
         if not day:
             return
