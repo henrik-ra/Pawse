@@ -101,6 +101,18 @@ body {
 .mode.live { background: rgba(46, 204, 113, 0.18); color: #5be59a; }
 .mode.demo { background: rgba(255, 255, 255, 0.14); color: #ddd; }
 
+.status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.updated {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+}
+
 /* ===== Layout ===== */
 .page {
   max-width: 1180px;
@@ -332,6 +344,59 @@ body {
   font-size: 0.76rem; padding: 3px 9px; border-radius: 999px;
   background: var(--bg-2); color: var(--ink-soft); font-weight: 600;
 }
+
+/* ===== Breathing exercise ===== */
+.hero-actions { margin-top: 14px; }
+.breathe-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px; border: none; border-radius: 999px; cursor: pointer;
+  font: 600 0.95rem "Segoe UI", system-ui, sans-serif;
+  color: #1f6f43; background: #e9f7ee;
+  transition: transform .15s ease, box-shadow .2s ease, background .2s ease;
+}
+.breathe-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(63, 163, 77, .25); }
+.breathe-btn .breathe-ico { font-size: 1.1rem; }
+.breathe-btn.urgent {
+  color: #fff; background: linear-gradient(135deg, #4a90d9, #3fa34d);
+  animation: breathePulse 2.6s ease-in-out infinite;
+}
+@keyframes breathePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74, 144, 217, .35); }
+  50% { box-shadow: 0 0 0 12px rgba(74, 144, 217, 0); }
+}
+
+.breath-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(120% 120% at 50% 38%, rgba(28, 40, 60, .72), rgba(16, 24, 36, .9));
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.breath-overlay[hidden] { display: none; }
+.breath-stage { text-align: center; color: #f3f6f8; user-select: none; }
+.breath-ring {
+  position: relative; width: 260px; height: 260px; margin: 0 auto 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+.breath-circle {
+  position: absolute; width: 230px; height: 230px; border-radius: 50%;
+  background: radial-gradient(circle at 50% 38%, rgba(120, 200, 160, .55), rgba(74, 144, 217, .40));
+  box-shadow: 0 0 60px rgba(120, 200, 160, .45), inset 0 0 40px rgba(255, 255, 255, .18);
+  transform: scale(0.5);
+  transition: transform var(--bdur, 4s) ease-in-out;
+}
+.breath-phase {
+  position: relative; z-index: 1;
+  font: 600 1.5rem "Segoe UI", system-ui, sans-serif;
+  letter-spacing: .3px; text-shadow: 0 1px 8px rgba(0, 0, 0, .3);
+}
+.breath-count { margin: 6px 0 2px; font-size: 1rem; opacity: .85; }
+.breath-hint { margin: 4px 0 0; font-size: .8rem; opacity: .55; }
+.breath-done {
+  margin-top: 14px; padding: 9px 22px; border: 1.5px solid rgba(255, 255, 255, .5);
+  border-radius: 999px; background: transparent; color: #fff; cursor: pointer;
+  font: 600 .9rem "Segoe UI", system-ui, sans-serif; transition: background .2s ease;
+}
+.breath-done:hover { background: rgba(255, 255, 255, .14); }
 
 /* ===== Footer / disclaimer ===== */
 .disclaimer {

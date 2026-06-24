@@ -29,7 +29,10 @@
     </nav>
 
     <a class="join-link" href="meeting.html" title="Open the Teams-style meeting">🎥 Join a meeting</a>
-    <span class="mode demo" id="mode">○ Demo data</span>
+    <div class="status">
+      <span class="mode demo" id="mode">○ Demo data</span>
+      <span class="updated" id="updated" hidden></span>
+    </div>
   </header>
 
   <main class="page">
@@ -87,6 +90,11 @@
         <div class="hero-meta">
           <span class="chip" id="chipUser">—</span>
           <span class="chip" id="chipSensors">— sensors live</span>
+        </div>
+        <div class="hero-actions">
+          <button class="breathe-btn" id="breatheBtn" type="button">
+            <span class="breathe-ico">🫁</span> Take a breath
+          </button>
         </div>
       </div>
     </section>
@@ -194,7 +202,7 @@
 
     <footer class="disclaimer">
       Pawse is private, opt-in, and <strong>not a medical diagnosis</strong>.
-      Sensor data is read live from Google Health (Fitbit).
+      <span id="sensor-source">Sensor data is read live from your wearable.</span>
     </footer>
   </main>
 
@@ -203,6 +211,19 @@
     <div class="modal-card" role="dialog" aria-modal="true" aria-label="Meeting details">
       <button class="modal-close" id="modalClose" aria-label="Close">×</button>
       <div id="modalBody"><!-- filled by app.js --></div>
+    </div>
+  </div>
+
+  <!-- Breathing exercise overlay -->
+  <div class="breath-overlay" id="breathOverlay" hidden>
+    <div class="breath-stage">
+      <div class="breath-ring">
+        <div class="breath-circle" id="breathCircle"></div>
+        <span class="breath-phase" id="breathPhase">Breathe in…</span>
+      </div>
+      <p class="breath-count" id="breathCount">Breath 1 of 4</p>
+      <button class="breath-done" id="breathDone" type="button">Done</button>
+      <p class="breath-hint">Follow the circle · tap outside to close</p>
     </div>
   </div>
 
