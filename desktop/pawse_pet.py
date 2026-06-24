@@ -61,12 +61,8 @@ PANDA_BLACK = "#1b1c1e"
 SHADOW = "#e4ded2"               # soft drop shadow (tkinter has no alpha)
 HAIRLINE = "#efeae0"             # subtle divider
 MOOD_SOFT = {"good": "#e9f7ee", "med": "#fdf4e0", "bad": "#fdecea"}
-CARD_BG = "#efeafc"              # lavender card
-STAT_BG = "#e7e9fb"             # periwinkle stat pills
-ACCENT = "#6c5ce7"              # purple brand accent
-LINK = "#e84393"                # pink dashboard link
-SCORE_INK = "#2d2a3a"           # near-black headline
-SHADOW2 = "#e9e3f5"             # lavender-tinted shadow
+STAT_BG = "#f1ede2"              # soft taupe stat pills
+BORDER = "#1b1c1e"              # thin black popup border
 
 
 # --- Data -------------------------------------------------------------------
@@ -267,49 +263,43 @@ class PawsePet:
         if azm is None:
             azm = wearable.get("active_minutes")
 
-        # layered soft shadow + lavender card
-        round_rect(c, 13, 19, CARD_W - 2, CARD_H - 2, 22, fill="#e3dcf2", outline="")
-        round_rect(c, 10, 14, CARD_W - 4, CARD_H - 5, 22, fill=SHADOW2, outline="")
-        round_rect(c, 7, 8, CARD_W - 7, CARD_H - 10, 22, fill=CARD_BG, outline="#e4ddf4")
+        # soft shadow + white card with a thin black border
+        round_rect(c, 11, 15, CARD_W - 3, CARD_H - 3, 20, fill=SHADOW, outline="")
+        round_rect(c, 7, 8, CARD_W - 7, CARD_H - 9, 20, fill=BG, outline=BORDER, width=1.5)
 
-        # panda (top-left)
-        draw_panda(c, 66, 62, 38, mood)
+        # panda inside its mood aura ring
+        draw_progress_ring(c, 64, 66, 40, score, width=7)
+        draw_panda(c, 64, 66, 26, mood)
 
         # title + mood pill
-        c.create_text(118, 46, anchor="w", text="Pawse", fill=SCORE_INK,
+        c.create_text(116, 46, anchor="w", text="Pawse", fill=INK,
                       font=("Segoe UI", 18, "bold"))
-        draw_stat_pill(c, 118, 74, (label or "—").upper(), accent,
+        draw_stat_pill(c, 116, 74, (label or "—").upper(), accent,
                        MOOD_SOFT.get(mood, "#eeeeee"), size=8)
 
-        # score ring (top-right)
-        sxx, syy, srr = CARD_W - 58, 64, 30
-        c.create_oval(sxx - srr, syy - srr, sxx + srr, syy + srr, outline="#ded8f0", width=7)
-        if score > 0:
-            c.create_arc(sxx - srr, syy - srr, sxx + srr, syy + srr, start=90,
-                         extent=-3.6 * min(score, 100), style="arc", outline=accent, width=7)
-        c.create_text(sxx, syy, text=str(score), fill=SCORE_INK, font=("Segoe UI", 22, "bold"))
-
-        # close button (top-right corner)
-        clx, cly = CARD_W - 26, 28
+        # big score (right) + close button (corner)
+        c.create_text(CARD_W - 26, 60, anchor="e", text=str(score), fill=accent,
+                      font=("Segoe UI", 30, "bold"))
+        clx, cly = CARD_W - 22, 26
         c.create_oval(clx - 9, cly - 9, clx + 9, cly + 9, fill="#e8553e", outline="", tags=("close",))
         c.create_text(clx, cly, text="\u00d7", fill="white", font=("Segoe UI", 11, "bold"), tags=("close",))
 
         # stat pills row (steps · bpm · active min)
-        px, gap = 26, 8
+        px, gap = 24, 8
         if steps is not None:
-            px = draw_stat_pill(c, px, 120, f"{int(steps):,} steps", ACCENT, STAT_BG) + gap
+            px = draw_stat_pill(c, px, 124, f"{int(steps):,} steps", INK, STAT_BG) + gap
         if hr:
-            px = draw_stat_pill(c, px, 120, f"{int(hr)} bpm", ACCENT, STAT_BG) + gap
+            px = draw_stat_pill(c, px, 124, f"{int(hr)} bpm", INK, STAT_BG) + gap
         if azm is not None:
-            px = draw_stat_pill(c, px, 120, f"{int(azm)} active min", ACCENT, STAT_BG) + gap
+            px = draw_stat_pill(c, px, 124, f"{int(azm)} active min", INK, STAT_BG) + gap
 
         # nudge
-        c.create_text(26, 156, anchor="w", text=nudge_for(score, steps), fill="#3a3550",
-                      font=("Segoe UI", 12), width=CARD_W - 52)
+        c.create_text(24, 158, anchor="w", text=nudge_for(score, steps), fill=INK,
+                      font=("Segoe UI", 12), width=CARD_W - 48)
 
         # open-dashboard link (bottom-right)
-        c.create_text(CARD_W - 26, 184, anchor="e", text="Open dashboard \u2192",
-                      fill=LINK, font=("Segoe UI", 10, "bold"), tags=("dash",))
+        c.create_text(CARD_W - 24, 186, anchor="e", text="Open dashboard \u2192",
+                      fill=INK_SOFT, font=("Segoe UI", 10, "bold"), tags=("dash",))
 
         c.tag_bind("close", "<Button-1>", lambda e: self._close())
         c.tag_bind("dash", "<Button-1>", lambda e: (webbrowser.open(_API_BASE), self._close()))
