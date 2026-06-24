@@ -94,6 +94,21 @@
     <!-- ===== KPI tiles ===== -->
     <section class="tiles" id="tiles"><!-- filled by app.js --></section>
 
+    <!-- ===== Pawse Score trend (cloud history) ===== -->
+    <section class="trend">
+      <article class="card chart-card chart-wide">
+        <header class="chart-head">
+          <h3>📈 Pawse Score · recent days</h3>
+          <span class="chart-sub" id="trendSub"></span>
+        </header>
+        <div class="chart-box"><canvas id="trendChart"></canvas></div>
+        <p class="trend-empty" id="trendEmpty" hidden>
+          No history yet — browse a few days, or deploy the cloud backend and
+          upload days to build your trend. 🐼
+        </p>
+      </article>
+    </section>
+
     <!-- ===== Charts ===== -->
     <section class="charts">
       <article class="card chart-card chart-wide">
@@ -164,6 +179,16 @@
           <div class="voice-val" id="voiceVal">—</div>
         </div>
         <p class="voice-note" id="voiceNote">—</p>
+      </article>
+
+      <article class="card insight-card face-card">
+        <h3>😶 Facial expression</h3>
+        <div class="voice-meter">
+          <div class="voice-bar"><span id="faceFill"></span></div>
+          <div class="voice-val" id="faceVal">—</div>
+        </div>
+        <p class="voice-note" id="faceNote">—</p>
+        <div class="face-emotions" id="faceEmotions"></div>
       </article>
     </section>
 

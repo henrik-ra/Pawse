@@ -1,0 +1,18 @@
+# Pawse edge agent — retrospective media analysis.
+#
+# Minimal, always-works baseline (voice via numpy is real with just these):
+numpy>=1.26
+
+# Audio decoding for .mp4 / .m4a / .mp3 (bundled static ffmpeg, no system install).
+# Without it, only .wav files can be analysed.
+imageio-ffmpeg>=0.4
+
+# --- Real on-device facial-expression recognition (image-based FER, ONNX) -----
+# Models (FER+ / UltraFace) are auto-downloaded on first run (~36 MB).
+onnxruntime>=1.17
+pillow>=10.0
+
+# --- Optional: richer voice features / deep models ----------------------------
+# librosa>=0.10
+# transformers>=4.40
+# torch>=2.2

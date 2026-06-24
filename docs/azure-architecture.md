@@ -11,6 +11,103 @@ explains the *why*, and suggests recovery actions.
 
 ---
 
+## ⭐ Implemented Architecture — Edge · Cloud · Clients (As-Built, June 2026)
+
+> Sections 1–6 below describe the **full target state**. This section is what is
+> **actually deployed today**: a deliberately simple, privacy-first split across
+> three tiers. All secrets, tokens, raw media and heavy ML stay on the **edge**;
+> the **cloud** is a small, keyless store-and-serve layer; everything else is a
+> thin, read-only **client**.
+
+```mermaid
+flowchart TB
+  subgraph EDGE["🖥️ Edge Agent — your machine (holds all tokens + media + ML)"]
+    CAL["Calendar sync<br/>Graph delegated / ICS / Outlook"]
+    WEAR["Wearable<br/>Fitbit / Google OAuth"]
+    MEDIA["Voice + Face ML<br/>on local media (roadmap)"]
+    BUILD["build_day() + score_day()"]
+    CAL --> BUILD
+    WEAR --> BUILD
+    MEDIA -.-> BUILD
+  end
+  BUILD -->|"POST /api/days (signals)"| API
+  subgraph CLOUD["☁️ Azure — keyless store & serve (Managed Identity)"]
+    API["Container App<br/>FastAPI + dashboard"]
+    DB[("Cosmos DB serverless<br/>dailyScores")]
+    API --> DB
+  end
+  API --> PET["🐼 Desktop Pet"]
+  API --> WEB["🖥️ Dashboard (browser)"]
+  API --> TEAMS["💬 Teams app (roadmap)"]
+```
+
+### The three tiers
+
+| Tier | Runs on | Holds | Responsibility |
+|---|---|---|---|
+| **☁️ Cloud** | Azure (always-on) | **no secrets** — only scores | Store + serve: API, Cosmos, dashboard, CI/CD. *Source of truth for history.* |
+| **🖥️ Edge Agent** | your machine (background) | **all tokens + media + ML** | Collect, analyze, score, upload. *Source of truth for raw signals.* |
+| **👀 Clients** | Pet, browser, Teams app | nothing | **Read-only** consumers of the cloud API. |
+
+**Core principle:** OAuth tokens (Fitbit/Google/Graph), recordings and the heavy
+ML models **never leave the edge**. The cloud only ever sees finished numbers —
+which is why it can stay keyless (Managed Identity → Cosmos) and is the basis of
+the GDPR/privacy story.
+
+### The Pawse Agent
+
+The edge work is consolidated into a single background service
+(`agent/pawse_agent.py`, roadmap) that runs on a schedule (e.g. every 15 min):
+
+1. **Sync calendar** → meetings + derived breaks
+2. **Pull wearable** → steps / HR / HRV (Fitbit *or* Google)
+3. **Analyze local media** → voice / face signals *(roadmap)*
+4. **Pull WorkIQ text** (when run interactively) → sentiment / pressure language
+5. **`build_day()` + `score_day()`** → `POST /api/days` to the cloud
+
+It replaces the one-shot uploader; [`tools/upload_day.py`](../tools/upload_day.py)
+becomes a thin "push once" wrapper around it.
+
+### Desktop Pet reads the cloud
+
+The pet ([`desktop/pawse_pet.py`](../desktop/pawse_pet.py)) is a pure client.
+Instead of `http://localhost:8000`, it reads the **cloud** API
+(`/api/live-day?userId=me`, URL via `PAWSE_API_URL`). That way it works **always
+and everywhere** — even when the local `server.py` is off it shows the last score
+the agent pushed. (Optional: prefer a local server when one is running, for
+sub-minute freshness.)
+
+### Calendar sync — options (no admin consent)
+
+WorkIQ is **author-time only** (it runs inside the IDE), so it is a seed/demo
+source, not an automatable sync. For real sync the agent uses, in order:
+
+| # | Method | Admin consent? | Auto? | Use |
+|---|---|---|---|---|
+| 1 | **Graph delegated** `Calendars.Read` + `/me/calendarView/delta` | user-consent only (no admin) *where the tenant allows it* | ✅ incremental (delta) | 🥇 preferred — test first |
+| 2 | **ICS feed** (Outlook "publish calendar" → secret .ics URL) | ❌ none | ✅ polling | 🥈 robust fallback |
+| 3 | **Outlook desktop via COM** (`win32com`) | ❌ none | ✅ local | 🥉 Windows-only, fully local |
+| 4 | **WorkIQ** (M365 Copilot, author-time cache) | ❌ none | ❌ manual | seed / demo (current) |
+
+`data/calendar_cache.json` stays the local cache the agent keeps fresh.
+
+### Wearable provider switch
+
+Every adapter in [`devices/`](../devices/) implements the same
+`get_daily_signals(date)` contract, so providers are interchangeable via one
+env var — no code change when switching device:
+
+```
+PAWSE_WEARABLE = fitbit | google | apple    # default: google
+```
+
+Fitbit uses the same personal-OAuth pattern as Google
+([`devices/google_health/google_auth.py`](../devices/google_health/google_auth.py)) —
+register a *Personal* app at dev.fitbit.com, no admin consent. Tokens are stored
+locally (gitignored) and **never** sent to the cloud.
+
+---
+
 ## 1. Design Principles
 
 | Principle | Implementation |

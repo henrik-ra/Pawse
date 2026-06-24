@@ -1,0 +1,21 @@
+# Keep the build context lean — and never ship secrets or local caches.
+.git/
+.venv/
+venv/
+**/__pycache__/
+**/*.pyc
+*.log
+
+# Secrets & personal data (defense in depth; also in .gitignore)
+.env
+devices/**/.env
+devices/**/*tokens*.json
+devices/google_health/google_health_cache.json
+data/calendar_cache.json
+
+# Things the image doesn't need
+docs/
+voice-analysis/
+PawseDashboard/
+desktop/
+.vscode/

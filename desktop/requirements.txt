@@ -1,0 +1,10 @@
+# Pawse Pet — desktop companion
+# The popup itself needs nothing beyond Python's standard library (tkinter).
+#
+# Optional: adds a system-tray icon with "Show now" / "Quit".
+pystray>=0.19
+Pillow>=10.0
+#
+# Build a standalone .exe:
+#   pyinstaller --onefile --noconsole --name PawsePet desktop/pawse_pet.py
+pyinstaller>=6.0

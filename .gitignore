@@ -24,6 +24,18 @@ voice-analysis/**/*.mp4
 voice-analysis/**/*.wav
 *.mov
 
+# Pawse media analysis — local-only derived signals, watcher state, dropped media
+data/media_signals.json
+data/.media_state.json
+data/recordings/*
+!data/recordings/README.md
+
+# WorkIQ calendar exports (transient, may contain personal meeting data)
+data/_workiq_*.json
+
+# FER ONNX models (auto-downloaded on first run, ~36 MB)
+voice-analysis/face_analysis/models/
+
 # OS / editor
 .DS_Store
 .idea/

@@ -1,0 +1,70 @@
+name: Deploy Pawse TEST (branch)
+
+# A parallel pipeline for the media-analysis branch. It does the *same* build as
+# the production workflow, but deploys the image as a **separate, labelled test
+# revision at 0% production traffic**. Production keeps serving the pinned
+# revision; the test build is reachable only via its own ...---test URL.
+
+on:
+  push:
+    branches: [media-analysis]
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ACR_NAME: acrpawse2ysupe36zqlhi
+  RESOURCE_GROUP: rg-pawse
+  CONTAINER_APP: ca-pawse-2ysupe36zqlhi
+  IMAGE_REPO: pawse-api
+  TEST_LABEL: test
+
+jobs:
+  deploy-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Build test image in ACR
+        run: |
+          az acr build \
+            --registry "$ACR_NAME" \
+            --image "$IMAGE_REPO:test-${{ github.sha }}" \
+            --build-arg BASE_IMAGE="$ACR_NAME.azurecr.io/python:3.12-slim" \
+            --file cloud/Dockerfile .
+
+      - name: Deploy as a labelled 0%-traffic test revision
+        run: |
+          SUFFIX="t$(echo ${{ github.sha }} | cut -c1-7)r${{ github.run_number }}"
+          az containerapp update \
+            --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
+            --image "$ACR_NAME.azurecr.io/$IMAGE_REPO:test-${{ github.sha }}" \
+            --revision-suffix "$SUFFIX"
+          REV=$(az containerapp show -n "$CONTAINER_APP" -g "$RESOURCE_GROUP" \
+                --query "properties.latestRevisionName" -o tsv)
+          echo "New test revision: $REV"
+          az containerapp revision label add \
+            --name "$CONTAINER_APP" --resource-group "$RESOURCE_GROUP" \
+            --label "$TEST_LABEL" --revision "$REV" --yes
+
+      - name: Show test + prod URLs
+        run: |
+          FQDN=$(az containerapp show -n "$CONTAINER_APP" -g "$RESOURCE_GROUP" \
+                 --query "properties.configuration.ingress.fqdn" -o tsv)
+          TEST_FQDN="${FQDN/$CONTAINER_APP./$CONTAINER_APP---$TEST_LABEL.}"
+          {
+            echo "### 🧪 Test deploy (branch: media-analysis)"
+            echo ""
+            echo "- **Test URL:** https://$TEST_FQDN"
+            echo "- **Prod URL (unchanged):** https://$FQDN"
+          } >> "$GITHUB_STEP_SUMMARY"
