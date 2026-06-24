@@ -80,75 +80,115 @@ app has stored, regardless of brand.
 
 ---
 
-## Run the dashboard against the Xiaomi watch
+## Set up on your Android phone
 
-**One command (server + live background sync):**
+A one-time setup gets the watch talking to Gadgetbridge and the phone talking to
+your laptop. After that, `start.ps1` keeps everything in sync automatically.
+
+### 1. Install Gadgetbridge
+
+Install it from **[F-Droid](https://f-droid.org/app/nodomain.freeyourgadget.gadgetbridge)**
+(the official, free build) or the [Gadgetbridge site](https://gadgetbridge.org).
+It is **not** on the Google Play Store.
+
+### 2. Pair the watch
+
+1. If the watch is currently paired to **Mi Fitness / Zepp**, unpair it there
+   first — only one app can hold the Bluetooth connection at a time.
+2. In Gadgetbridge tap **＋ (add device)** and let it scan.
+3. Xiaomi/Redmi watches are encrypted, so Gadgetbridge asks for an **auth key**.
+   Follow the [Huami/Xiaomi pairing guide](https://gadgetbridge.org/basics/pairing/huami-xiaomi-server/)
+   to obtain it, and enter it prefixed with `0x` (e.g. `0x1234…`).
+4. Select your watch and finish pairing — you should now see live data inside
+   Gadgetbridge.
+
+### 3. Turn on Gadgetbridge's Intent API
+
+This lets the laptop trigger a watch sync + database export hands-free.
+
+- Gadgetbridge → **Settings → Developer options → Intent API**, enable:
+  - **Allow activity sync trigger**
+  - **Allow database export**
+
+### 4. Enable Android USB (or wireless) debugging
+
+1. Settings → **About phone** → tap **Build number** seven times to unlock
+   *Developer options*.
+2. Settings → **Developer options** → enable **USB debugging** (and/or
+   **Wireless debugging** if you want cable-free sync).
+
+### 5. Connect the phone to your laptop
+
+Make sure `adb` is installed on the laptop (one-time, puts it on PATH):
 
 ```powershell
-.\start.ps1                          # → http://localhost:8000, auto-syncs the watch
-.\start.ps1 -IntervalSeconds 120     # slower sync cadence
+winget install Google.PlatformTools
+```
+
+**Over USB:** plug the phone in, accept the *"Allow USB debugging?"* prompt on
+the phone, then confirm it's visible:
+
+```powershell
+adb devices        # should list your phone as "device"
+```
+
+**Over Wi-Fi (Android 11+):** on the phone go to *Developer options → Wireless
+debugging → Pair device with pairing code*, then:
+
+```powershell
+adb pair    <phone-ip>:<pair-port>     # enter the 6-digit code shown on the phone
+adb connect <phone-ip>:<adb-port>
+```
+
+---
+
+## Run Pawse
+
+Once the phone is connected, start everything with **one command** (keep the
+phone and watch nearby):
+
+```powershell
+.\start.ps1                          # → http://localhost:8000, auto-syncs every ~2 min
+.\start.ps1 -IntervalSeconds 300     # slower cadence, gentler on battery
 .\start.ps1 -NoSync                  # serve the existing DB only, no live pulling
 ```
 
-`start.ps1` launches the [`sync_gadgetbridge.ps1`](sync_gadgetbridge.ps1) loop
-in the background (so the dashboard keeps getting fresh watch data) and the
-server in the foreground. Press Ctrl+C to stop both.
+`start.ps1` runs the [`sync_gadgetbridge.ps1`](sync_gadgetbridge.ps1) loop in the
+background (so the dashboard keeps getting fresh watch data) and the server in
+the foreground. Press **Ctrl+C** to stop both.
 
-**Server only** (serves whatever `Gadgetbridge.db` is already on disk — does
-*not* pull fresh data):
+**One-off sync** (no loop) — over USB or Wi-Fi:
 
 ```powershell
-$env:PAWSE_WEARABLE = "xiaomi"       # use the Xiaomi watch instead of Google Health
+.\devices\xiaomi\sync_gadgetbridge.ps1 -Trigger                              # USB
+.\devices\xiaomi\sync_gadgetbridge.ps1 -Trigger -Wireless 192.168.1.50:5555  # wireless
+```
+
+**Server only** — serve whatever `Gadgetbridge.db` is already on disk, without
+pulling new data:
+
+```powershell
+$env:PAWSE_WEARABLE = "xiaomi"
 python server.py                     # → http://localhost:8000
 ```
 
-Check a day's signals directly:
+**Inspect a day directly** (handy for debugging):
 
 ```powershell
 python devices/xiaomi/xiaomi_client.py            # today
 python devices/xiaomi/xiaomi_client.py 2026-06-18 # a specific day
 ```
 
----
-
-## Gadgetbridge setup
-
-1. Install [Gadgetbridge](https://gadgetbridge.org) on Android and pair the
-   watch (the Redmi Watch 4 needs the Xiaomi auth key — see the Gadgetbridge
-   [pairing docs](https://gadgetbridge.org/basics/pairing/huami-xiaomi-server/)).
-2. **Settings → Database management → Export Data.**
-3. Copy the file here, or point Pawse at it:
-
-```powershell
-$env:GADGETBRIDGE_DB = "C:\path\to\Gadgetbridge.db"
-python devices/xiaomi/gadgetbridge_client.py            # today
-python devices/xiaomi/gadgetbridge_client.py --tables   # inspect the schema
-```
-
-Gadgetbridge already did the watch's Bluetooth auth handshake, so the data is
-complete — it's just only as fresh as your last export (auto-export can keep it
-current).
-
-### Automated sync ([`sync_gadgetbridge.ps1`](sync_gadgetbridge.ps1))
-
-Instead of exporting and copying by hand, this script pulls the database from
-the phone over **adb** — and with `-Trigger` it also tells Gadgetbridge to sync
-the watch and export the DB first, so the run is fully hands-free.
-
-> **Prerequisite:** Android Debug Bridge (`adb`) on PATH — it's a system tool,
-> not a pip package. Install once with:
+> **No Intent API?** You can still sync manually: in Gadgetbridge use
+> **Settings → Database management → Export Data**, then run the sync script
+> *without* `-Trigger` (it just pulls the exported file), or point Pawse straight
+> at an exported DB:
 >
 > ```powershell
-> winget install Google.PlatformTools   # (adb)
+> $env:GADGETBRIDGE_DB = "C:\path\to\Gadgetbridge.db"
+> python devices/xiaomi/gadgetbridge_client.py            # today
+> python devices/xiaomi/gadgetbridge_client.py --tables   # inspect the schema
 > ```
->
-> For `-Trigger`, enable in Gadgetbridge under *Settings → Developer options →
-> Intent API*: **Allow activity sync trigger** and **Allow database export**.
-
-```powershell
-.\devices\xiaomi\sync_gadgetbridge.ps1 -Trigger                       # USB cable
-.\devices\xiaomi\sync_gadgetbridge.ps1 -Trigger -Wireless 192.168.1.50:5555  # wireless adb
-```
 
 ---
 
