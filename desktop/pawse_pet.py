@@ -39,7 +39,7 @@ from datetime import datetime
 # server. Override with the PAWSE_API_URL environment variable.
 _API_BASE = os.environ.get(
     "PAWSE_API_URL",
-    "https://ca-pawse-2ysupe36zqlhi---test.redstone-da7928c5.swedencentral.azurecontainerapps.io",
+    "https://ca-pawse-2ysupe36zqlhi.redstone-da7928c5.swedencentral.azurecontainerapps.io",
 ).rstrip("/")
 API_URL = f"{_API_BASE}/api/live-day"
 DEFAULT_INTERVAL_MIN = 30        # minutes between pop-ups
