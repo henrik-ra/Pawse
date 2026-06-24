@@ -263,9 +263,9 @@ class PawsePet:
         if azm is None:
             azm = wearable.get("active_minutes")
 
-        # soft shadow + white card with a thin black border
+        # soft shadow + clean white card (no hard border)
         round_rect(c, 11, 15, CARD_W - 3, CARD_H - 3, 20, fill=SHADOW, outline="")
-        round_rect(c, 7, 8, CARD_W - 7, CARD_H - 9, 20, fill=BG, outline=BORDER, width=1.5)
+        round_rect(c, 7, 8, CARD_W - 7, CARD_H - 9, 20, fill=BG, outline="")
 
         # panda inside its mood aura ring
         draw_progress_ring(c, 64, 66, 40, score, width=7)
