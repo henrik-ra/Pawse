@@ -100,7 +100,61 @@ function renderHero(score, label, data, w) {
   const cls = moodClass(score);
   panda.classList.add(cls);
   document.getElementById("pandaMouth").setAttribute("d", MOUTHS[cls.replace("mood-", "")]);
+
+  const breatheBtn = document.getElementById("breatheBtn");
+  if (breatheBtn) breatheBtn.classList.toggle("urgent", score >= 70);
 }
+
+// ---- Breathing exercise -----------------------------------------------------
+let _breathTimer = null;
+
+function openBreath() {
+  const ov = document.getElementById("breathOverlay");
+  if (!ov) return;
+  ov.hidden = false;
+  runBreath(0, 4);
+}
+
+function closeBreath() {
+  clearTimeout(_breathTimer);
+  const ov = document.getElementById("breathOverlay");
+  if (ov) ov.hidden = true;
+}
+
+function runBreath(cycle, total) {
+  const circle = document.getElementById("breathCircle");
+  const phaseEl = document.getElementById("breathPhase");
+  const countEl = document.getElementById("breathCount");
+  if (!circle) return;
+  if (cycle >= total) {
+    phaseEl.textContent = "Well done";
+    countEl.textContent = "Carry the calm with you 🐼";
+    circle.style.setProperty("--bdur", "1.6s");
+    requestAnimationFrame(() => { circle.style.transform = "scale(0.72)"; });
+    return;
+  }
+  countEl.textContent = `Breath ${cycle + 1} of ${total}`;
+  const phases = [
+    { name: "Breathe in…", dur: 4000, scale: 1 },
+    { name: "Hold", dur: 4000, scale: 1 },
+    { name: "Breathe out…", dur: 6000, scale: 0.5 },
+  ];
+  let i = 0;
+  (function step() {
+    if (i >= phases.length) { runBreath(cycle + 1, total); return; }
+    const p = phases[i++];
+    phaseEl.textContent = p.name;
+    circle.style.setProperty("--bdur", (p.dur / 1000) + "s");
+    requestAnimationFrame(() => { circle.style.transform = `scale(${p.scale})`; });
+    _breathTimer = setTimeout(step, p.dur);
+  })();
+}
+
+document.getElementById("breatheBtn")?.addEventListener("click", openBreath);
+document.getElementById("breathDone")?.addEventListener("click", closeBreath);
+document.getElementById("breathOverlay")?.addEventListener("click", (e) => {
+  if (e.target.id === "breathOverlay") closeBreath();
+});
 
 function summaryFor(score, w) {
   const steps = w.steps || 0;

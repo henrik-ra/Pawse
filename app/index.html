@@ -87,6 +87,11 @@
           <span class="chip" id="chipUser">—</span>
           <span class="chip" id="chipSensors">— sensors live</span>
         </div>
+        <div class="hero-actions">
+          <button class="breathe-btn" id="breatheBtn" type="button">
+            <span class="breathe-ico">🫁</span> Take a breath
+          </button>
+        </div>
       </div>
     </section>
 
@@ -175,6 +180,19 @@
       Sensor data is read live from Google Health (Fitbit).
     </footer>
   </main>
+
+  <!-- Breathing exercise overlay -->
+  <div class="breath-overlay" id="breathOverlay" hidden>
+    <div class="breath-stage">
+      <div class="breath-ring">
+        <div class="breath-circle" id="breathCircle"></div>
+        <span class="breath-phase" id="breathPhase">Breathe in…</span>
+      </div>
+      <p class="breath-count" id="breathCount">Breath 1 of 4</p>
+      <button class="breath-done" id="breathDone" type="button">Done</button>
+      <p class="breath-hint">Follow the circle · tap outside to close</p>
+    </div>
+  </div>
 
   <!-- Loading overlay (shown while fetching a day) -->
   <div class="loading" id="loading" hidden>
