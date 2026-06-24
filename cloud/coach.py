@@ -35,10 +35,14 @@ _SYSTEM_PROMPT = (
     "diagnose stress, burnout or emotions, and never label how someone feels. "
     "Frame recovery as a way to perform better, and be bidirectional: when energy "
     "is high, encourage focused deep work; when the day is heavy, suggest a small "
-    "reset. Always ground advice in the user's real workday context (meetings, "
-    "focus time, breaks) and energy signals, and prefer ONE concrete, "
-    "output-oriented next action. Be concise (2-4 sentences) and warm. Reply in "
-    "the user's language."
+    "reset. You have access to the user's data: today's scored day AND their "
+    "longer-term history (score trends, meeting-load patterns, voice-signal trends "
+    "over days and weeks). You can answer analytical questions about this data — "
+    "describe patterns, averages and changes factually and cite concrete numbers "
+    "and dates from the context — but still never diagnose. Ground advice in the "
+    "real workday context and prefer ONE concrete, output-oriented next action. Be "
+    "concise (2-5 sentences); for data questions a short bulleted summary is fine. "
+    "Reply in the user's language."
 )
 
 _client = None
@@ -99,8 +103,112 @@ def _day_summary(day: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
-def _fallback_reply(question: str, day: dict[str, Any]) -> str:
+def _history_summary(history: list[dict[str, Any]] | None) -> str:
+    """Compact longitudinal summary (score/meeting/voice trends) for grounding."""
+    if not history:
+        return ""
+
+    rows = []          # (date, score, meeting_count, voice_stress)
+    scores: list[float] = []
+    voice: list[float] = []
+    loads: list[int] = []
+    for h in history:
+        if not isinstance(h, dict):
+            continue
+        data = h.get("data", h)
+        score = h.get("pawse_score")
+        date = h.get("date") or data.get("date") or "?"
+        meetings = data.get("meetings", []) or []
+        v = data.get("voice") or {}
+        vs = v.get("avg_stress_index")
+        if vs is None:
+            vs = v.get("stressIndex")
+        rows.append((date, score, len(meetings), vs))
+        if isinstance(score, (int, float)):
+            scores.append(float(score))
+        if isinstance(vs, (int, float)):
+            voice.append(float(vs))
+        loads.append(len(meetings))
+
+    lines = [
+        "Recent days (newest first): "
+        + ", ".join(f"{d}={s}" for d, s, _, _ in rows[:14])
+    ]
+    if scores:
+        lines.append(
+            f"Score avg {round(sum(scores) / len(scores), 1)}, "
+            f"min {min(scores):.0f}, max {max(scores):.0f}, over {len(scores)} days"
+        )
+        chrono = list(reversed(scores))      # oldest → newest
+        if len(chrono) >= 4:
+            half = len(chrono) // 2
+            early = sum(chrono[:half]) / half
+            late = sum(chrono[half:]) / (len(chrono) - half)
+            delta = round(late - early, 1)
+            direction = (
+                "improving" if delta > 2 else "declining" if delta < -2 else "stable"
+            )
+            lines.append(
+                f"Score trend: {direction} ({'+' if delta >= 0 else ''}{delta})"
+            )
+    valid = [r for r in rows if isinstance(r[1], (int, float))]
+    if valid:
+        worst = min(valid, key=lambda r: r[1])
+        lines.append(
+            f"Worst recent day: {worst[0]} (score {worst[1]}, {worst[2]} meetings)"
+        )
+    if voice:
+        lines.append(
+            f"Voice stress index: avg {round(sum(voice) / len(voice), 2)} "
+            f"(range {min(voice):.2f}-{max(voice):.2f}, {len(voice)} recordings)"
+        )
+    if loads:
+        lines.append(f"Meeting load: avg {round(sum(loads) / len(loads), 1)}/day")
+    return "\n".join(lines)
+
+
+def _looks_analytical(question: str) -> bool:
+    q = (question or "").lower()
+    keys = (
+        "woche", "trend", "verlauf", "letzte", "history", "historie", "vergleich",
+        "monat", "tage", "durchschnitt", "average", "week", "compare", "pattern",
+        "muster", "entwicklung",
+    )
+    return any(k in q for k in keys)
+
+
+def _fallback_reply(
+    question: str, day: dict[str, Any], history: list[dict[str, Any]] | None = None
+) -> str:
     """Deterministic reply used when Azure OpenAI isn't available."""
+    # Analytical / longitudinal question → summarise the trend factually.
+    if history and _looks_analytical(question):
+        scores = [
+            float(h.get("pawse_score"))
+            for h in history
+            if isinstance(h, dict) and isinstance(h.get("pawse_score"), (int, float))
+        ]
+        if scores:
+            avg = round(sum(scores) / len(scores), 1)
+            chrono = list(reversed(scores))
+            half = max(1, len(chrono) // 2)
+            delta = round(
+                sum(chrono[half:]) / max(1, len(chrono) - half)
+                - sum(chrono[:half]) / half,
+                1,
+            )
+            direction = (
+                "geht aufwärts" if delta > 2
+                else "geht runter" if delta < -2
+                else "ist stabil"
+            )
+            return (
+                f"Über die letzten {len(scores)} Tage liegt dein Pawse-Score im "
+                f"Schnitt bei {avg} (von {min(scores):.0f} bis {max(scores):.0f}) und "
+                f"{direction}. Sag „Details“, wenn ich den schlechtesten Tag und "
+                "seine Ursachen aufschlüsseln soll. 🐼"
+            )
+
     if not day:
         return (
             "Ich habe für heute noch keine Energiedaten. Sobald dein Tag erfasst "
@@ -139,30 +247,37 @@ def _fallback_reply(question: str, day: dict[str, Any]) -> str:
     return body
 
 
-def coach_reply(question: str, day: dict[str, Any] | None) -> str:
-    """Return a short coaching reply for ``question`` grounded in ``day``."""
+def coach_reply(
+    question: str,
+    day: dict[str, Any] | None,
+    history: list[dict[str, Any]] | None = None,
+) -> str:
+    """Return a coaching reply grounded in today's ``day`` and longer-term ``history``."""
     day = day or {}
     client = _get_client()
     if client is None:
-        return _fallback_reply(question, day)
+        return _fallback_reply(question, day, history)
 
     try:
         context = _day_summary(day)
+        trend = _history_summary(history)
+        if trend:
+            context += "\n\nLonger-term history:\n" + trend
         resp = client.chat.completions.create(
             model=_AOAI_DEPLOYMENT,
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {
                     "role": "user",
-                    "content": f"My workday so far:\n{context}\n\nQuestion: {question or 'How am I doing today?'}",
+                    "content": f"My data:\n{context}\n\nQuestion: {question or 'How am I doing today?'}",
                 },
             ],
-            max_tokens=220,
+            max_tokens=320,
             temperature=0.6,
         )
         return (resp.choices[0].message.content or "").strip() or _fallback_reply(
-            question, day
+            question, day, history
         )
     except Exception:
         # Model unreachable / quota / auth — degrade gracefully, never crash the bot.
-        return _fallback_reply(question, day)
+        return _fallback_reply(question, day, history)

@@ -72,6 +72,16 @@ def _get_day(user: str, date: str) -> dict[str, Any] | None:
         return None
 
 
+def _get_history(user: str, days: int = 14) -> list[dict[str, Any]]:
+    """Read recent scored days so the coach can answer longitudinal questions."""
+    from . import pawse_store
+
+    try:
+        return pawse_store.list_recent_days(user, days)
+    except Exception:
+        return []
+
+
 def _action_card(day: dict[str, Any] | None) -> dict[str, Any] | None:
     """Build an Adaptive Card with concrete actions when the day looks heavy."""
     if not day:
@@ -134,8 +144,8 @@ class PawseBot(ActivityHandler):
             if member.id != turn_context.activity.recipient.id:
                 await turn_context.send_activity(
                     "Hi, ich bin **Pawse** 🐼 — dein Workday-Energy-Companion. "
-                    "Frag mich z. B. *„Wie ist meine Energie heute?“* oder "
-                    "*„Wann sollte ich Deep Work machen?“*"
+                    "Frag mich z. B. *„Wie ist meine Energie heute?“*, "
+                    "*„Wie war meine Woche?“* oder *„Wann sollte ich Deep Work machen?“*"
                 )
 
     async def on_message_activity(self, turn_context: TurnContext) -> None:
@@ -147,10 +157,11 @@ class PawseBot(ActivityHandler):
             await self._handle_action(turn_context, value["action"])
             return
 
-        # 2) Normal chat turn → coach reply grounded in today's scored day.
+        # 2) Normal chat turn → coach reply grounded in today + longer-term history.
         text = (activity.text or "").strip()
         day = _get_day(_BOT_USER, _today())
-        reply = coach.coach_reply(text, day)
+        history = _get_history(_BOT_USER)
+        reply = coach.coach_reply(text, day, history)
         await turn_context.send_activity(MessageFactory.text(reply))
 
         card = _action_card(day)
