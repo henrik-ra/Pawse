@@ -31,6 +31,7 @@ import sys
 import tkinter as tk
 import tkinter.font as tkfont
 import urllib.request
+import webbrowser
 from datetime import datetime
 
 # --- Config -----------------------------------------------------------------
@@ -42,10 +43,10 @@ _API_BASE = os.environ.get(
 ).rstrip("/")
 API_URL = f"{_API_BASE}/api/live-day"
 DEFAULT_INTERVAL_MIN = 30        # minutes between pop-ups
-VISIBLE_SECONDS = 8              # how long the panda stays on screen
+VISIBLE_SECONDS = 12             # how long the panda stays on screen
 WORK_HOURS = (8, 20)            # only appear between these local hours
 JITTER_MIN = 8                   # +/- random minutes so it feels organic
-CARD_W, CARD_H = 360, 164
+CARD_W, CARD_H = 392, 206
 MARGIN = 22                      # gap from screen edges
 TASKBAR_PAD = 48                 # leave room above the taskbar
 TRANSPARENT = "#010203"          # this colour becomes see-through (Windows)
@@ -60,6 +61,12 @@ PANDA_BLACK = "#1b1c1e"
 SHADOW = "#e4ded2"               # soft drop shadow (tkinter has no alpha)
 HAIRLINE = "#efeae0"             # subtle divider
 MOOD_SOFT = {"good": "#e9f7ee", "med": "#fdf4e0", "bad": "#fdecea"}
+CARD_BG = "#efeafc"              # lavender card
+STAT_BG = "#e7e9fb"             # periwinkle stat pills
+ACCENT = "#6c5ce7"              # purple brand accent
+LINK = "#e84393"                # pink dashboard link
+SCORE_INK = "#2d2a3a"           # near-black headline
+SHADOW2 = "#e9e3f5"             # lavender-tinted shadow
 
 
 # --- Data -------------------------------------------------------------------
@@ -121,15 +128,16 @@ def draw_panda(c: tk.Canvas, cx: float, cy: float, r: float, mood: str):
     # nose
     c.create_oval(cx - r * 0.12, cy + r * 0.26, cx + r * 0.12, cy + r * 0.42,
                   fill=PANDA_BLACK, outline="")
+    # rosy blush (always — keeps the panda friendly)
+    for sx in (-1, 1):
+        c.create_oval(cx + sx * r * 0.62 - 6, cy + r * 0.30 - 4,
+                      cx + sx * r * 0.62 + 6, cy + r * 0.30 + 4,
+                      fill="#ffc2cf", outline="")
     # mouth by mood
     my = cy + r * 0.52
     if mood == "good":
         c.create_arc(cx - r * 0.26, my - r * 0.22, cx + r * 0.26, my + r * 0.22,
                      start=200, extent=140, style="arc", outline=INK, width=2)
-        for sx in (-1, 1):  # blush
-            c.create_oval(cx + sx * r * 0.62 - 6, cy + r * 0.30 - 4,
-                          cx + sx * r * 0.62 + 6, cy + r * 0.30 + 4,
-                          fill="#ffc2cf", outline="")
     elif mood == "med":
         c.create_line(cx - r * 0.18, my, cx + r * 0.18, my, fill=INK, width=2)
     else:  # bad — frown, worried brows, sweat drop
@@ -174,6 +182,17 @@ def draw_pill(c: tk.Canvas, x_right: float, cy: float, text: str, fg: str, bg: s
     c.create_text(x1 + pad, cy, anchor="w", text=text, fill=fg, font=f)
 
 
+def draw_stat_pill(c: tk.Canvas, x: float, cy: float, text: str, fg: str, bg: str,
+                   size: int = 9) -> float:
+    """A left-aligned rounded pill; returns its right-edge x for chaining."""
+    f = tkfont.Font(family="Segoe UI", size=size, weight="bold")
+    pad = 11
+    w = f.measure(text) + 2 * pad
+    round_rect(c, x, cy - 13, x + w, cy + 13, 13, fill=bg, outline="")
+    c.create_text(x + pad, cy, anchor="w", text=text, fill=fg, font=f)
+    return x + w
+
+
 # --- The pet ----------------------------------------------------------------
 class PawsePet:
     def __init__(self, interval_min: int):
@@ -213,10 +232,20 @@ class PawsePet:
         score = int(day.get("pawse_score", day.get("score", 0)) or 0)
         label = day.get("label", "")
         wearable = (day.get("data") or {}).get("wearable", {})
-        steps = wearable.get("steps")
-        self._build_popup(score, label, steps)
+        self._build_popup(score, label, wearable)
 
     def _build_popup(self, score: int, label: str, steps):
+        top = tk.Toplevel(self.root)
+        self._popup = top
+        top.overrideredirect(True)
+        top.attributes("-topmost", True)
+        try:
+            top.attributes("-transparentcolor", TRANSPARENT)
+        except tk.TclError:
+            pass  # non-Windows: falls back to a rectangular window
+        top.configure(bg=TRANSPARENT)
+
+    def _build_popup(self, score: int, label: str, wearable: dict):
         top = tk.Toplevel(self.root)
         self._popup = top
         top.overrideredirect(True)
@@ -232,43 +261,58 @@ class PawsePet:
 
         mood = mood_for(score)
         accent = ring_color(score)
-        soft = MOOD_SOFT.get(mood, "#eeeeee")
+        steps = wearable.get("steps")
+        hr = wearable.get("hr_avg") or wearable.get("resting_hr")
+        azm = wearable.get("azm_total")
+        if azm is None:
+            azm = wearable.get("active_minutes")
 
-        # layered soft shadow → premium depth
-        round_rect(c, 13, 19, CARD_W - 2, CARD_H - 2, 24, fill="#eee9de", outline="")
-        round_rect(c, 10, 14, CARD_W - 4, CARD_H - 5, 24, fill=SHADOW, outline="")
-        # crisp white card
-        round_rect(c, 7, 8, CARD_W - 7, CARD_H - 10, 24, fill=BG, outline="#efeae0")
+        # layered soft shadow + lavender card
+        round_rect(c, 13, 19, CARD_W - 2, CARD_H - 2, 22, fill="#e3dcf2", outline="")
+        round_rect(c, 10, 14, CARD_W - 4, CARD_H - 5, 22, fill=SHADOW2, outline="")
+        round_rect(c, 7, 8, CARD_W - 7, CARD_H - 10, 22, fill=CARD_BG, outline="#e4ddf4")
 
-        # left mood "tile" with the panda in its aura ring
-        round_rect(c, 16, 22, 134, CARD_H - 22, 18, fill=soft, outline="")
-        cx, cy = 75, CARD_H // 2
-        draw_progress_ring(c, cx, cy, 42, score, width=7)
-        draw_panda(c, cx, cy, 27, mood)
+        # panda (top-left)
+        draw_panda(c, 66, 62, 38, mood)
 
-        # right content zone
-        rx = 152
-        c.create_text(rx, 33, anchor="w", text="P A W S E", fill=INK_SOFT,
-                      font=("Segoe UI", 9, "bold"))
-        draw_pill(c, CARD_W - 22, 32, label or "—", accent, soft)
+        # title + mood pill
+        c.create_text(118, 46, anchor="w", text="Pawse", fill=SCORE_INK,
+                      font=("Segoe UI", 18, "bold"))
+        draw_stat_pill(c, 118, 74, (label or "—").upper(), accent,
+                       MOOD_SOFT.get(mood, "#eeeeee"), size=8)
 
-        # hero score
-        c.create_text(rx, 64, anchor="w", text=str(score), fill=accent,
-                      font=("Segoe UI", 32, "bold"))
-        num_w = tkfont.Font(family="Segoe UI", size=32, weight="bold").measure(str(score))
-        c.create_text(rx + num_w + 8, 71, anchor="w", text="/100", fill=INK_SOFT,
-                      font=("Segoe UI", 11))
+        # score ring (top-right)
+        sxx, syy, srr = CARD_W - 58, 64, 30
+        c.create_oval(sxx - srr, syy - srr, sxx + srr, syy + srr, outline="#ded8f0", width=7)
+        if score > 0:
+            c.create_arc(sxx - srr, syy - srr, sxx + srr, syy + srr, start=90,
+                         extent=-3.6 * min(score, 100), style="arc", outline=accent, width=7)
+        c.create_text(sxx, syy, text=str(score), fill=SCORE_INK, font=("Segoe UI", 22, "bold"))
 
-        # divider + nudge + steps (with a small mood dot)
-        c.create_line(rx, 95, CARD_W - 22, 95, fill=HAIRLINE)
-        c.create_text(rx, 115, anchor="w", text=nudge_for(score, steps), fill=INK,
-                      font=("Segoe UI", 10, "bold"), width=CARD_W - rx - 24)
+        # close button (top-right corner)
+        clx, cly = CARD_W - 26, 28
+        c.create_oval(clx - 9, cly - 9, clx + 9, cly + 9, fill="#e8553e", outline="", tags=("close",))
+        c.create_text(clx, cly, text="\u00d7", fill="white", font=("Segoe UI", 11, "bold"), tags=("close",))
+
+        # stat pills row (steps · bpm · active min)
+        px, gap = 26, 8
         if steps is not None:
-            c.create_oval(rx, 135, rx + 6, 141, fill=accent, outline="")
-            c.create_text(rx + 13, 138, anchor="w", text=f"{int(steps):,} steps today",
-                          fill=INK_SOFT, font=("Segoe UI", 9))
+            px = draw_stat_pill(c, px, 120, f"{int(steps):,} steps", ACCENT, STAT_BG) + gap
+        if hr:
+            px = draw_stat_pill(c, px, 120, f"{int(hr)} bpm", ACCENT, STAT_BG) + gap
+        if azm is not None:
+            px = draw_stat_pill(c, px, 120, f"{int(azm)} active min", ACCENT, STAT_BG) + gap
 
-        c.bind("<Button-1>", lambda e: self._close())
+        # nudge
+        c.create_text(26, 156, anchor="w", text=nudge_for(score, steps), fill="#3a3550",
+                      font=("Segoe UI", 12), width=CARD_W - 52)
+
+        # open-dashboard link (bottom-right)
+        c.create_text(CARD_W - 26, 184, anchor="e", text="Open dashboard \u2192",
+                      fill=LINK, font=("Segoe UI", 10, "bold"), tags=("dash",))
+
+        c.tag_bind("close", "<Button-1>", lambda e: self._close())
+        c.tag_bind("dash", "<Button-1>", lambda e: (webbrowser.open(_API_BASE), self._close()))
 
         sw, sh = top.winfo_screenwidth(), top.winfo_screenheight()
         self._x = sw - CARD_W - MARGIN
