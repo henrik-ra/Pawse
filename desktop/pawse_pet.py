@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import random
 import sys
@@ -44,7 +45,7 @@ DEFAULT_INTERVAL_MIN = 30        # minutes between pop-ups
 VISIBLE_SECONDS = 8              # how long the panda stays on screen
 WORK_HOURS = (8, 20)            # only appear between these local hours
 JITTER_MIN = 8                   # +/- random minutes so it feels organic
-CARD_W, CARD_H = 352, 158
+CARD_W, CARD_H = 360, 164
 MARGIN = 22                      # gap from screen edges
 TASKBAR_PAD = 48                 # leave room above the taskbar
 TRANSPARENT = "#010203"          # this colour becomes see-through (Windows)
@@ -148,12 +149,20 @@ def draw_ring(c: tk.Canvas, cx: float, cy: float, r: float, score: int):
     c.create_text(cx, cy, text=str(score), fill=INK, font=("Segoe UI", 20, "bold"))
 
 
-def draw_progress_ring(c: tk.Canvas, cx: float, cy: float, r: float, score: int, width: int = 6):
-    """A thin mood-coloured progress ring (no number — the panda sits inside)."""
+def draw_progress_ring(c: tk.Canvas, cx: float, cy: float, r: float, score: int, width: int = 7):
+    """A mood-coloured progress ring with rounded caps (the panda sits inside)."""
     c.create_oval(cx - r, cy - r, cx + r, cy + r, outline=RING_BG, width=width)
-    if score > 0:
-        c.create_arc(cx - r, cy - r, cx + r, cy + r, start=90, extent=-3.6 * score,
-                     style="arc", outline=ring_color(score), width=width)
+    if score <= 0:
+        return
+    col = ring_color(score)
+    extent = -3.6 * min(score, 100)
+    c.create_arc(cx - r, cy - r, cx + r, cy + r, start=90, extent=extent,
+                 style="arc", outline=col, width=width)
+    cap = width / 2
+    c.create_oval(cx - cap, cy - r - cap, cx + cap, cy - r + cap, fill=col, outline="")
+    ang = math.radians(90 + extent)
+    ex, ey = cx + r * math.cos(ang), cy - r * math.sin(ang)
+    c.create_oval(ex - cap, ey - cap, ex + cap, ey + cap, fill=col, outline="")
 
 
 def draw_pill(c: tk.Canvas, x_right: float, cy: float, text: str, fg: str, bg: str) -> None:
@@ -223,37 +232,40 @@ class PawsePet:
 
         mood = mood_for(score)
         accent = ring_color(score)
+        soft = MOOD_SOFT.get(mood, "#eeeeee")
 
-        # layered soft shadow + crisp white card
-        round_rect(c, 10, 14, CARD_W - 4, CARD_H - 4, 22, fill=SHADOW, outline="")
-        round_rect(c, 7, 8, CARD_W - 7, CARD_H - 10, 22, fill=BG, outline="#ece7da")
-        # left mood accent bar
-        round_rect(c, 18, 26, 22, CARD_H - 24, 2, fill=accent, outline="")
+        # layered soft shadow → premium depth
+        round_rect(c, 13, 19, CARD_W - 2, CARD_H - 2, 24, fill="#eee9de", outline="")
+        round_rect(c, 10, 14, CARD_W - 4, CARD_H - 5, 24, fill=SHADOW, outline="")
+        # crisp white card
+        round_rect(c, 7, 8, CARD_W - 7, CARD_H - 10, 24, fill=BG, outline="#efeae0")
 
-        # panda inside a mood "aura" ring
-        cx, cy = 80, 84
-        draw_progress_ring(c, cx, cy, 44, score)
-        draw_panda(c, cx, cy, 28, mood)
+        # left mood "tile" with the panda in its aura ring
+        round_rect(c, 16, 22, 134, CARD_H - 22, 18, fill=soft, outline="")
+        cx, cy = 75, CARD_H // 2
+        draw_progress_ring(c, cx, cy, 42, score, width=7)
+        draw_panda(c, cx, cy, 27, mood)
 
         # right content zone
-        rx = 142
-        c.create_text(rx, 32, anchor="w", text="PAWSE", fill=INK_SOFT,
+        rx = 152
+        c.create_text(rx, 33, anchor="w", text="P A W S E", fill=INK_SOFT,
                       font=("Segoe UI", 9, "bold"))
-        draw_pill(c, CARD_W - 20, 31, label or "—", accent, MOOD_SOFT.get(mood, "#eeeeee"))
+        draw_pill(c, CARD_W - 22, 32, label or "—", accent, soft)
 
         # hero score
-        c.create_text(rx, 61, anchor="w", text=str(score), fill=accent,
-                      font=("Segoe UI", 30, "bold"))
-        num_w = tkfont.Font(family="Segoe UI", size=30, weight="bold").measure(str(score))
-        c.create_text(rx + num_w + 7, 67, anchor="w", text="/100", fill=INK_SOFT,
+        c.create_text(rx, 64, anchor="w", text=str(score), fill=accent,
+                      font=("Segoe UI", 32, "bold"))
+        num_w = tkfont.Font(family="Segoe UI", size=32, weight="bold").measure(str(score))
+        c.create_text(rx + num_w + 8, 71, anchor="w", text="/100", fill=INK_SOFT,
                       font=("Segoe UI", 11))
 
-        # divider + nudge + steps
-        c.create_line(rx, 92, CARD_W - 20, 92, fill=HAIRLINE)
-        c.create_text(rx, 111, anchor="w", text=nudge_for(score, steps), fill=INK,
-                      font=("Segoe UI", 10, "bold"), width=CARD_W - rx - 22)
+        # divider + nudge + steps (with a small mood dot)
+        c.create_line(rx, 95, CARD_W - 22, 95, fill=HAIRLINE)
+        c.create_text(rx, 115, anchor="w", text=nudge_for(score, steps), fill=INK,
+                      font=("Segoe UI", 10, "bold"), width=CARD_W - rx - 24)
         if steps is not None:
-            c.create_text(rx, 134, anchor="w", text=f"{int(steps):,} steps today",
+            c.create_oval(rx, 135, rx + 6, 141, fill=accent, outline="")
+            c.create_text(rx + 13, 138, anchor="w", text=f"{int(steps):,} steps today",
                           fill=INK_SOFT, font=("Segoe UI", 9))
 
         c.bind("<Button-1>", lambda e: self._close())
