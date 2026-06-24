@@ -24,6 +24,7 @@ Run directly to score the sample day:
 from __future__ import annotations
 
 import datetime as _dt
+import functools
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -55,8 +56,15 @@ STEPS_SEDENTARY = 500       # sedentary -> full strain
 
 # Calendar
 MEET_LIGHT = 2              # meetings -> no strain
-MEET_HEAVY = 7              # meetings -> full strainMEET_MIN_LIGHT = 90        # total meeting minutes/day -> no strain (1.5 h)
-MEET_MIN_HEAVY = 360       # total meeting minutes/day -> full strain (6 h)B2B_HEAVY = 4               # back-to-back meetings -> full strain
+MEET_HEAVY = 7              # meetings -> full strain
+MEET_MIN_LIGHT = 90        # total meeting minutes/day -> no strain (1.5 h)
+MEET_MIN_HEAVY = 360       # total meeting minutes/day -> full strain (6 h)
+B2B_HEAVY = 4              # back-to-back meetings -> full strain
+
+# Wearable-derived (biometric) signals. These are only scored when a wearable is
+# actually present; without a device they are dropped and their weight is shared
+# across the remaining signals (calendar + opt-in voice/face).
+BIOMETRIC_KEYS = frozenset({"hrv", "heart_rate", "spo2", "sleep", "movement"})
 
 # --- Relative importance of each signal (renormalised over what's available) -
 WEIGHTS = {
@@ -148,13 +156,24 @@ BASELINE_HALF_LIFE_DAYS = 21    # recency decay: a day's weight halves every 21 
 
 # Metrics we personalise, and sane bounds for the "no strain" anchor so an
 # unusual calibration window can't produce an absurd threshold.
-BASELINE_METRICS = ("hrv", "spo2", "sleep", "steps")
+#
+# meeting_count / meeting_minutes are "more is worse" and adapt to the load a
+# user is used to. Their upper bound is a deliberate guardrail: personalisation
+# can make the score *more* sensitive for a light-calendar user, but it can
+# never normalise a chronically over-booked calendar (the "no strain" anchor is
+# capped at 4 meetings / 3 h).
+BASELINE_METRICS = ("hrv", "spo2", "sleep", "steps", "meeting_count", "meeting_minutes")
 _BASELINE_ZERO_BOUNDS = {
     "hrv": (25.0, 90.0),
     "spo2": (94.0, 99.0),
     "sleep": (5.0, 9.0),
     "steps": (2000.0, 12000.0),
+    "meeting_count": (1.0, 4.0),
+    "meeting_minutes": (60.0, 180.0),
 }
+# Minimum gap between the "no strain" and "full strain" meeting anchors, so a
+# steady calendar still leaves head-room before the signal saturates.
+_MEETING_FULL_SPAN = {"meeting_count": 3.0, "meeting_minutes": 150.0}
 
 
 @dataclass
@@ -190,14 +209,31 @@ def _empty_baselines() -> Baselines:
     return Baselines(refs={}, values={}, days_used=0)
 
 
+def _meeting_load(day: dict[str, Any]) -> tuple[Optional[float], Optional[float]]:
+    """Per-day meeting count and total meeting minutes.
+
+    Returns ``(None, None)`` when the day has no calendar at all; a day with an
+    empty meeting list counts as ``(0, 0)`` (a genuinely meeting-free day).
+    """
+    meetings = day.get("meetings")
+    if not isinstance(meetings, list):
+        return None, None
+    durations = [d for d in (_meeting_minutes(m) for m in meetings) if d is not None]
+    minutes = None if (meetings and not durations) else float(sum(durations))
+    return float(len(meetings)), minutes
+
+
 def _metric_values(day: dict[str, Any]) -> dict[str, Optional[float]]:
     w = day.get("wearable", {})
+    meeting_count, meeting_minutes = _meeting_load(day)
     return {
         "hrv": _first(w, "hrv", "hrv_avg", "hrv_ms", "avg_hrv"),
         "spo2": _first(w, "spo2", "spo2_avg", "oxygen_saturation"),
         "sleep": _first(w, "sleep_hours", "sleep"),
         "steps": _first(w, "steps"),
         "resting_hr": _first(w, "resting_hr", "baseline_heart_rate"),
+        "meeting_count": meeting_count,
+        "meeting_minutes": meeting_minutes,
     }
 
 
@@ -223,6 +259,8 @@ def _derive_endpoints(metric: str, pairs: list[tuple[float, float]]) -> tuple[fl
         full = max(zero * 0.12, 300.0)
     elif metric == "hrv":
         full = max(zero - 1.5 * sd, zero * 0.55)
+    elif metric in _MEETING_FULL_SPAN:  # meetings — more is worse, full sits above zero
+        full = zero + max(1.5 * sd, _MEETING_FULL_SPAN[metric])
     else:  # spo2, sleep — lower is worse, modest spread
         full = zero - max(2.0, 1.5 * sd)
     return round(zero, 2), round(full, 2)
@@ -392,55 +430,42 @@ def _score_heart_rate(data: dict[str, Any], weight: float, baselines: Baselines)
     return Component("heart_rate", "Heart-rate response", weight, strain, True, reason)
 
 
-def _score_hrv(data: dict[str, Any], weight: float, baselines: Baselines) -> Component:
-    w = data.get("wearable", {})
-    hrv = _first(w, "hrv", "hrv_avg", "hrv_ms", "avg_hrv")
-    if hrv is None:
-        return Component("hrv", "Recovery (HRV)", weight)
-    zero_at, full_at = baselines.ramp_points("hrv", HRV_CALM_MS, HRV_STRAINED_MS)
-    strain = _ramp(hrv, zero_at, full_at)
-    reason = None
-    if strain >= 50:
-        if baselines.established and "hrv" in baselines.refs:
-            reason = f"Heart-rate variability ({round(hrv)} ms) is below your personal baseline — under-recovered"
-        else:
-            reason = f"Heart-rate variability is low ({round(hrv)} ms) — your body is under-recovered"
-    return Component("hrv", "Recovery (HRV)", weight, strain, True, reason)
+# HRV, SpO2, sleep and movement share one shape — read a wearable value, ramp it
+# against a (possibly personalised) reference, and explain it once past a
+# threshold — so they live in a table instead of four near-identical functions.
+# Each spec: (key, label, value_keys, ramp_metric, default_zero, default_full,
+# reason_at, reason(value, baselines)).
+_BIOMETRIC_SPECS = (
+    ("hrv", "Recovery (HRV)", ("hrv", "hrv_avg", "hrv_ms", "avg_hrv"), "hrv",
+     HRV_CALM_MS, HRV_STRAINED_MS, 50,
+     lambda v, b: (f"Heart-rate variability ({round(v)} ms) is below your personal baseline — under-recovered"
+                   if b.established and "hrv" in b.refs
+                   else f"Heart-rate variability is low ({round(v)} ms) — your body is under-recovered")),
+    ("spo2", "Blood oxygen", ("spo2", "spo2_avg", "oxygen_saturation"), "spo2",
+     SPO2_NORMAL, SPO2_LOW, 50,
+     lambda v, b: f"Blood-oxygen dipped to {round(v)}%"),
+    ("sleep", "Sleep recovery", ("sleep_hours", "sleep"), "sleep",
+     SLEEP_RESTED_H, SLEEP_DEPRIVED_H, 45,
+     lambda v, b: f"Only {v:g} h sleep last night — recovery debt carries into today"),
+    ("movement", "Movement", ("steps",), "steps",
+     STEPS_ACTIVE, STEPS_SEDENTARY, 50,
+     lambda v, b: f"Low movement (~{int(v)} steps) — little physical recovery between calls"),
+)
 
 
-def _score_spo2(data: dict[str, Any], weight: float, baselines: Baselines) -> Component:
-    w = data.get("wearable", {})
-    spo2 = _first(w, "spo2", "spo2_avg", "oxygen_saturation")
-    if spo2 is None:
-        return Component("spo2", "Blood oxygen", weight)
-    zero_at, full_at = baselines.ramp_points("spo2", SPO2_NORMAL, SPO2_LOW)
-    strain = _ramp(spo2, zero_at, full_at)
-    reason = f"Blood-oxygen dipped to {round(spo2)}%" if strain >= 50 else None
-    return Component("spo2", "Blood oxygen", weight, strain, True, reason)
+def _score_biometric(spec, data: dict[str, Any], weight: float, baselines: Baselines) -> Component:
+    """Score one wearable signal from its ``_BIOMETRIC_SPECS`` row."""
+    key, label, value_keys, ramp_metric, default_zero, default_full, reason_at, reason_fn = spec
+    value = _first(data.get("wearable", {}), *value_keys)
+    if value is None:
+        return Component(key, label, weight)
+    zero_at, full_at = baselines.ramp_points(ramp_metric, default_zero, default_full)
+    strain = _ramp(value, zero_at, full_at)
+    reason = reason_fn(value, baselines) if strain >= reason_at else None
+    return Component(key, label, weight, strain, True, reason)
 
 
-def _score_sleep(data: dict[str, Any], weight: float, baselines: Baselines) -> Component:
-    w = data.get("wearable", {})
-    sleep = _first(w, "sleep_hours", "sleep")
-    if sleep is None:
-        return Component("sleep", "Sleep recovery", weight)
-    zero_at, full_at = baselines.ramp_points("sleep", SLEEP_RESTED_H, SLEEP_DEPRIVED_H)
-    strain = _ramp(sleep, zero_at, full_at)
-    reason = (f"Only {sleep:g} h sleep last night — recovery debt carries into today"
-              if strain >= 45 else None)
-    return Component("sleep", "Sleep recovery", weight, strain, True, reason)
-
-
-def _score_movement(data: dict[str, Any], weight: float, baselines: Baselines) -> Component:
-    w = data.get("wearable", {})
-    steps = _first(w, "steps")
-    if steps is None:
-        return Component("movement", "Movement", weight)
-    zero_at, full_at = baselines.ramp_points("steps", STEPS_ACTIVE, STEPS_SEDENTARY)
-    strain = _ramp(steps, zero_at, full_at)
-    reason = (f"Low movement (~{int(steps)} steps) — little physical recovery between calls"
-              if strain >= 50 else None)
-    return Component("movement", "Movement", weight, strain, True, reason)
+_BIOMETRIC_SCORERS = {s[0]: functools.partial(_score_biometric, s) for s in _BIOMETRIC_SPECS}
 
 
 # --- Behavioural signals (calendar) -----------------------------------------
@@ -484,9 +509,14 @@ def _score_meetings(data: dict[str, Any], weight: float, baselines: Baselines) -
 
     # Total time in meetings is the primary load signal (a 2 h meeting is not a
     # 5 min one); the count adds the context-switching cost of many meetings.
-    count_strain = _ramp(count, MEET_LIGHT, MEET_HEAVY)
+    # The "no strain" / "full strain" anchors adapt to the load this user is used
+    # to (clamped so an over-booked calendar can't be normalised away), falling
+    # back to population defaults until a baseline is established.
+    count_zero, count_full = baselines.ramp_points("meeting_count", MEET_LIGHT, MEET_HEAVY)
+    count_strain = _ramp(count, count_zero, count_full)
     if durations:
-        duration_strain = _ramp(total_minutes, MEET_MIN_LIGHT, MEET_MIN_HEAVY)
+        min_zero, min_full = baselines.ramp_points("meeting_minutes", MEET_MIN_LIGHT, MEET_MIN_HEAVY)
+        duration_strain = _ramp(total_minutes, min_zero, min_full)
         strain = 0.7 * duration_strain + 0.3 * count_strain
     else:
         strain = count_strain
@@ -565,13 +595,13 @@ def _score_face(data: dict[str, Any], weight: float, baselines: Baselines) -> Co
 
 
 SCORERS: tuple[tuple[str, Callable[[dict[str, Any], float, Baselines], Component]], ...] = (
-    ("hrv", _score_hrv),
+    ("hrv", _BIOMETRIC_SCORERS["hrv"]),
     ("heart_rate", _score_heart_rate),
     ("meeting_load", _score_meetings),
     ("recovery", _score_recovery),
-    ("sleep", _score_sleep),
-    ("movement", _score_movement),
-    ("spo2", _score_spo2),
+    ("sleep", _BIOMETRIC_SCORERS["sleep"]),
+    ("movement", _BIOMETRIC_SCORERS["movement"]),
+    ("spo2", _BIOMETRIC_SCORERS["spo2"]),
     ("voice", _score_voice),
     ("face", _score_face),
 )
@@ -643,15 +673,28 @@ def score_day(data: dict[str, Any], baselines: Optional[Baselines] = None) -> di
         if c.reason
     ][:4]
 
+    signals_used = [c.key for c in available]
+    wearable_used = any(key in BIOMETRIC_KEYS for key in signals_used)
+
+    if not available:
+        # No signals at all (no wearable, no calendar, no opt-in modalities):
+        # don't imply a calm day — say so and prompt the user to connect a source.
+        recommendations = [
+            "Connect a wearable or your calendar so Pawse can score your day."
+        ]
+    else:
+        recommendations = _recommendations(components)
+
     return {
         "user": data.get("user"),
         "date": data.get("date"),
         "pawse_score": score,
-        "label": _label(score),
+        "label": _label(score) if available else "No data",
         "reasons": reasons,
-        "recommendations": _recommendations(components),
+        "recommendations": recommendations,
         "component_scores": {c.key: round(c.strain) for c in available},
-        "signals_used": [c.key for c in available],
+        "signals_used": signals_used,
+        "wearable_used": wearable_used,
         "optional_signals": {
             "voice": any(c.key == "voice" and c.available for c in components),
             "face": any(c.key == "face" and c.available for c in components),

@@ -21,6 +21,15 @@ signals that are actually present**.
 > weight is redistributed — the score stays on the same 0–100 scale no matter
 > how many sensors a user has enabled.
 
+> **No wearable? Still works.** If no device is connected, the biometric signals
+> (`hrv`, `heart_rate`, `sleep`, `movement`, `spo2`) are simply absent, so the
+> Pawse Score is computed from the calendar (`meeting_load`, `recovery`) plus any
+> opt-in voice/face signals. Demo/sample biometrics are **never** fed into the
+> score — only a *live* connected wearable contributes biodata (`server.py` gates
+> this on the wearable's `mode == "live"`). The result includes a
+> `wearable_used` flag, and when literally no signal is available the score is
+> labelled **"No data"** instead of implying a calm day.
+
 ### The signals
 
 | Stream | Signal | What it measures | Weight |
@@ -76,9 +85,19 @@ have enough history. The flow is:
    - A `confidence` value (0..1) grows from establishment up to a full window.
 
 Personalised metrics: `hrv`, `spo2`, `sleep`, `steps` (each gets its own
-ramp), plus a personal resting-HR baseline. Behavioural and perception signals
-keep their fixed scale. Each per-metric anchor is clamped to a sane range so an
-odd calibration window can't produce an absurd threshold.
+ramp), plus a personal resting-HR baseline. **Meeting load is personalised too**
+(`meeting_count`, `meeting_minutes`): the score learns the calendar you're *used
+to*, so the same 3-meeting day flags more strain for a normally-light user than
+for a habitually busy one. Because more meetings is *worse*, the anchors run the
+other way (your typical load → no strain; heavier than usual → full strain).
+
+> **Guardrail.** The meeting "no strain" anchor is **clamped at 4 meetings / 3 h**
+> so personalisation can make the score *more* sensitive for a light calendar but
+> can **never** normalise a chronically over-booked one into looking healthy.
+
+The perception signals (`voice`, `face`) keep their fixed scale. Each per-metric
+anchor is clamped to a sane range so an odd calibration window can't produce an
+absurd threshold.
 
 Re-run calibration whenever new days arrive (e.g. nightly) — it recomputes from
 the rolling window, so the baseline gets steadier over time without going
@@ -99,7 +118,7 @@ state:
   "days_required": 7,
   "window_days": 60,
   "confidence": 0.66,                // grows as more history accumulates
-  "personalized_metrics": ["hrv", "resting_hr", "sleep", "spo2", "steps"]
+  "personalized_metrics": ["hrv", "meeting_count", "meeting_minutes", "resting_hr", "sleep", "spo2", "steps"]
 }
 ```
 

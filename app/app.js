@@ -23,22 +23,29 @@ function shiftDate(iso, days) {
 
 // ---- Local scoring fallback (mirrors the Python engine) --------------------
 function scoreDay(data) {
-  let total = 0;
+  let total = 0, maxWeight = 0;
   const reasons = [];
   const meetings = data.meetings || [];
+  // Calendar signals are always available.
+  maxWeight += WEIGHTS.meetings + WEIGHTS.back_to_backs + WEIGHTS.no_breaks;
   if (meetings.length >= 6) { total += WEIGHTS.meetings; reasons.push(`Heavy meeting load (${meetings.length} meetings)`); }
   else if (meetings.length >= 4) { total += WEIGHTS.meetings / 2; reasons.push(`Busy meeting day (${meetings.length} meetings)`); }
   const b2b = meetings.filter(m => m.back_to_back).length;
   if (b2b >= 3) { total += WEIGHTS.back_to_backs; reasons.push(`${b2b} back-to-back meetings — little recovery time`); }
   else if (b2b >= 1) { total += WEIGHTS.back_to_backs / 2; reasons.push(`${b2b} back-to-back meeting(s)`); }
   if (data.breaks && data.breaks.lunch_break === false) { total += WEIGHTS.no_breaks; reasons.push("No lunch break — poor recovery"); }
+  // Wearable biodata is only scored when a device is actually present.
   const w = data.wearable || {};
-  if ((w.steps || 0) < LOW_STEPS_THRESHOLD) { total += WEIGHTS.low_movement; reasons.push(`Low movement (only ${w.steps} steps)`); }
-  const resting = w.resting_hr || 60;
-  const spikes = (w.hr_samples || []).filter(s => (s.bpm - resting) >= ELEVATED_HR_DELTA);
-  if (spikes.length) { total += WEIGHTS.elevated_hr; reasons.push(`Heart-rate spikes during ${spikes.length} meeting(s) — possible strain`); }
-  const score = Math.max(0, Math.min(100, Math.round(total)));
-  return { pawse_score: score, label: labelFor(score), reasons, recommendations: recommend(reasons), data, mode: (data.wearable || {}).mode || "demo" };
+  const hasWearable = w.steps != null || (w.hr_samples || []).length > 0;
+  if (hasWearable) {
+    maxWeight += WEIGHTS.low_movement + WEIGHTS.elevated_hr;
+    if ((w.steps || 0) < LOW_STEPS_THRESHOLD) { total += WEIGHTS.low_movement; reasons.push(`Low movement (only ${w.steps} steps)`); }
+    const resting = w.resting_hr || 60;
+    const spikes = (w.hr_samples || []).filter(s => (s.bpm - resting) >= ELEVATED_HR_DELTA);
+    if (spikes.length) { total += WEIGHTS.elevated_hr; reasons.push(`Heart-rate spikes during ${spikes.length} meeting(s) — possible strain`); }
+  }
+  const score = Math.max(0, Math.min(100, Math.round(maxWeight ? total / maxWeight * 100 : 0)));
+  return { pawse_score: score, label: labelFor(score), reasons, recommendations: recommend(reasons), data, mode: w.mode || "demo", wearable_connected: hasWearable };
 }
 function labelFor(score) { return score >= 70 ? "High strain" : score >= 40 ? "Medium strain" : "Low strain"; }
 function recommend(reasons) {
@@ -57,9 +64,10 @@ function render(result) {
   const w = data.wearable || {};
   const score = result.pawse_score ?? result.score ?? 0;
   const label = result.label || labelFor(score);
+  const connected = result.wearable_connected === true;
 
-  showMode(result.mode || w.mode || "demo");
-  renderHero(score, label, data, w);
+  showMode(result.mode || w.mode || "demo", connected);
+  renderHero(score, label, data, w, connected);
   renderTiles(w, data);
   renderHrChart(w);
   renderZonesChart(w);
@@ -80,15 +88,18 @@ const MOUTHS = {
   bad: "M82 161 Q100 144 118 161",
 };
 
-function renderHero(score, label, data, w) {
+function renderHero(score, label, data, w, connected) {
   document.getElementById("score").textContent = score;
   const labelEl = document.getElementById("label");
   labelEl.textContent = label;
   labelEl.className = "label hero-label " + label.split(" ")[0].toLowerCase();
 
-  document.getElementById("summary").textContent = summaryFor(score, w);
+  document.getElementById("summary").textContent = summaryFor(score, w, connected);
   document.getElementById("chipUser").textContent = `${data.user || "You"} · ${prettyDate(data.date || state.date)}`;
-  document.getElementById("chipSensors").textContent = `${countSensors(w)} live sensors`;
+  const sensors = countSensors(w);
+  document.getElementById("chipSensors").textContent = connected
+    ? `${sensors} live sensors`
+    : (sensors ? `${sensors} demo sensors · not scored` : "No wearable connected");
 
   // Gauge ring + panda mood.
   const gauge = document.getElementById("gauge");
@@ -102,7 +113,12 @@ function renderHero(score, label, data, w) {
   document.getElementById("pandaMouth").setAttribute("d", MOUTHS[cls.replace("mood-", "")]);
 }
 
-function summaryFor(score, w) {
+function summaryFor(score, w, connected) {
+  if (!connected) {
+    if (score >= 70) return "Intense day — heavy meeting load and little recovery. Time to pawse. 🐼 Connect a wearable for fuller insight.";
+    if (score >= 40) return "Moderately busy day. A protected break would lift your recovery. Connect a wearable for fuller insight.";
+    return "Nicely balanced calendar today. Connect a wearable to add heart-rate and recovery signals. ✨";
+  }
   const steps = w.steps || 0;
   if (score >= 70) return `Intense day — heavy meeting load and little recovery. Only ${nf.format(steps)} steps so far. Time to pawse. 🐼`;
   if (score >= 40) return `Moderately busy day. A short walk or a protected break would lift your recovery. ${nf.format(steps)} steps logged.`;
@@ -360,10 +376,10 @@ function fillList(id, items) {
 }
 
 // ---- Mode badge & date header ---------------------------------------------
-function showMode(mode) {
+function showMode(mode, connected) {
   const el = document.getElementById("mode");
-  if (mode === "live") { el.textContent = "● LIVE (Fitbit)"; el.className = "mode live"; }
-  else { el.textContent = "○ Demo data"; el.className = "mode demo"; }
+  if (connected || mode === "live") { el.textContent = "● LIVE (Fitbit)"; el.className = "mode live"; }
+  else { el.textContent = "○ Demo data · not scored"; el.className = "mode demo"; }
 }
 
 function prettyDate(iso) {

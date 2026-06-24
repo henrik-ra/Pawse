@@ -45,6 +45,10 @@ def build_live_day(date: str | None = None) -> dict[str, Any]:
 
     signals = get_daily_signals(date)
     day["date"] = date
+    # A wearable only counts as *connected* when it returns real (live) data.
+    # Without a device the client returns demo data; we keep it for display but
+    # must NOT let that fabricated biodata influence the Pawse Score.
+    connected = signals.get("mode") == "live"
     # Pass through every metric the client computed (steps, resting/avg/peak HR,
     # HR zones, steps-by-hour, calories, distance, active minutes, SpO2, HRV, …)
     # while keeping the core keys the scorer relies on.
@@ -60,9 +64,14 @@ def build_live_day(date: str | None = None) -> dict[str, Any]:
     day["breaks"] = calendar["breaks"]
     day["calendar_source"] = calendar["calendar_source"]
 
-    result = score_day(day)
+    # Only a connected wearable contributes biodata to the score. With no device
+    # the day is scored from the calendar (and any opt-in voice/face) alone — the
+    # scoring engine simply drops the missing biometric signals and renormalises.
+    scored_day = day if connected else {k: v for k, v in day.items() if k != "wearable"}
+    result = score_day(scored_day)
     result["data"] = day
     result["mode"] = day["wearable"]["mode"]
+    result["wearable_connected"] = connected
     result["calendar_source"] = day["calendar_source"]
     return result
 
