@@ -167,15 +167,6 @@ function autoSave() {
   S.saved = true;
   try { navigator.sendBeacon("/api/teams-sessions", new Blob([JSON.stringify(buildSession())], { type: "application/json" })); } catch (_) {}
 }
-async function saveAndFinish() {
-  if (S.n < 1) { note("Nothing measured yet — give it a few seconds."); return; }
-  $("saveBtn").disabled = true; $("saveBtn").textContent = "Saving…";
-  try { await fetch("/api/teams-sessions", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(buildSession()) }); S.saved = true; }
-  catch (e) { note("Save failed: " + e.message); $("saveBtn").disabled = false; $("saveBtn").textContent = "Save & finish"; return; }
-  setStatus("saved ✓", "#3fa34d");
-  $("saveBtn").textContent = "Saved ✓";
-  note("Biomarkers saved to your dashboard.");
-}
 
 // Auto-save when the panel/meeting closes.
 window.addEventListener("pagehide", autoSave);
@@ -192,13 +183,12 @@ function drawMesh(pts, col) {
 
 async function main() {
   S.ctx = S.canvas.getContext("2d");
-  $("saveBtn").addEventListener("click", saveAndFinish);
   initTeams();
   try {
     note("Loading model…"); await initVision();
     note("Requesting camera & microphone…"); await startCamera();
     S.capturing = true; S.startedAt = Date.now();
-    note("Pawse is measuring you during this call. Leave the call (or click Save) to store it.");
+    note("Measuring your wellbeing live during this call…");
     setStatus("recording", "#3fa34d");
   } catch (e) {
     console.error(e);

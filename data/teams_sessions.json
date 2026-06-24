@@ -131,5 +131,21 @@
     },
     "source": "pawse-teams-app",
     "label": "Low strain"
+  },
+  {
+    "date": "2026-06-24",
+    "title": "Stakeholder update",
+    "start": "16:00",
+    "end": "17:00",
+    "duration_min": 60,
+    "distress_score": 27,
+    "biomarkers": {
+      "fatigue": 25,
+      "emotion": 3,
+      "tension": 24,
+      "voice": 62
+    },
+    "source": "pawse-teams-app",
+    "label": "Low strain"
   }
 ]

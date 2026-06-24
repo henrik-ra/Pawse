@@ -26,6 +26,7 @@
     .row .bar i { display:block; height:100%; }
     .row .val { width:22px; text-align:right; font-weight:700; }
     .note { font-size:.72rem; color:var(--muted); margin:6px 2px; min-height:1.2em; }
+    .auto { font-size:.66rem; color:#9aa0a4; margin:2px 2px 0; }
     .primary { width:100%; background:#6264a7; color:#fff; border:none; border-radius:9px; padding:10px; font-weight:600; cursor:pointer; }
     .primary:hover { background:#4f5193; }
     .saved { color:var(--good); font-weight:700; }
@@ -36,8 +37,8 @@
   <div class="cam"><video id="video" autoplay muted playsinline></video><canvas id="overlay"></canvas></div>
   <div class="score"><span id="distress">–</span><small>/100 distress</small></div>
   <div class="bars" id="bars"></div>
-  <p class="note" id="note">Pawse measures your wellbeing locally during this call.</p>
-  <button id="saveBtn" class="primary">Save &amp; finish</button>
+  <p class="note" id="note">Measuring your wellbeing live during this call…</p>
+  <p class="auto" id="autohint">Runs automatically · saves to your dashboard when you leave the call.</p>
   <script type="module" src="meetingpanel.js"></script>
 </body>
 </html>
