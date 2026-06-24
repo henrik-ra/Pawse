@@ -16,7 +16,7 @@
     Use -NoSync to get that old behaviour (serve only, no live pulling).
 
 .PARAMETER IntervalSeconds
-    Seconds between watch syncs (default 90). Practical floor is ~60-90s.
+    Seconds between watch syncs (default 120). Practical floor is ~60-90s.
 
 .PARAMETER NoSync
     Skip the background sync loop and just serve the existing DB.
@@ -31,7 +31,7 @@
 #>
 [CmdletBinding()]
 param(
-    [int]$IntervalSeconds = 90,
+    [int]$IntervalSeconds = 120,
     [switch]$NoSync,
     [string]$Wearable = "xiaomi"
 )

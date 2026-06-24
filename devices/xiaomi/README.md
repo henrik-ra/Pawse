@@ -2,20 +2,81 @@
 
 This branch adds Xiaomi smartwatch support. The **Redmi Watch 4** uses Xiaomi's
 encrypted, authenticated proprietary protocol, so the reliable way to read it is
-via **[Gadgetbridge](https://gadgetbridge.org)** — an open-source Android app
-that pairs with the watch and stores every sample in a local SQLite database.
+via **[Gadgetbridge](https://gadgetbridge.org)**.
+
+## What is Gadgetbridge?
+
+**Gadgetbridge** is a free, open-source (AGPLv3) Android app that talks to your
+watch or fitness band **directly over Bluetooth**, fully replacing the vendor's
+app (Mi Fitness / Zepp / Huawei Health / etc.). It performs the proprietary
+pairing and authentication handshake itself, then stores every sample it
+receives — heart rate, steps, sleep, SpO₂, HRV, workouts — in a **local SQLite
+database on the phone**. No vendor account, no cloud sign-in, and no internet
+connection are required for it to work.
+
 Pawse reads that database and returns the normalised signal dict (see
 [`../README.md`](../README.md)), falling back to realistic **demo data** so the
-dashboard never breaks.
-
-[`xiaomi_client.py`](xiaomi_client.py) is the **unified entry point** Pawse
-imports; it routes to [`gadgetbridge_client.py`](gadgetbridge_client.py).
+dashboard never breaks. [`xiaomi_client.py`](xiaomi_client.py) is the **unified
+entry point** Pawse imports; it routes to
+[`gadgetbridge_client.py`](gadgetbridge_client.py).
 
 > Other approaches (direct BLE from the PC, the Zepp/Huami cloud, and the Mi
 > Fitness data export) were prototyped but don't work for the Redmi Watch 4:
 > it won't broadcast standard BLE heart rate, it pairs to Mi Fitness via Xiaomi
 > SSO (no Huami email/password), and the Mi Fitness export takes ~15 days. Those
 > backends were removed in favour of Gadgetbridge.
+
+## Your data stays local — no privacy trade-off
+
+The **entire pipeline runs on hardware you own**, end to end — your health data
+never touches a third-party server:
+
+```
+Watch ──BLE──▶ Gadgetbridge (your phone) ──adb pull──▶ your laptop ──▶ Pawse
+```
+
+- **No vendor cloud.** Gadgetbridge never uploads your biometrics to Xiaomi,
+  Google, Fitbit or anyone else. Nothing leaves your devices.
+- **No account or login.** No Mi Account, no Zepp SSO, no OAuth tokens to leak.
+- **You own the raw data.** It's a plain SQLite file you can read, back up,
+  query or delete at will — not locked behind a vendor API or app.
+- **Works offline.** The sync runs over a USB cable or your local Wi-Fi; the
+  public internet is never in the loop.
+- **Auditable & open source.** Both Gadgetbridge and Pawse are open, so you can
+  verify exactly what happens to your health data.
+
+This is what lets Pawse stay **private, opt-in, and not a medical diagnosis** —
+the biometrics that drive your score live and die on your own machines.
+
+## Supported watches
+
+Gadgetbridge is **not** Xiaomi-only: it supports **490+ devices from ~70
+vendors** (see the always-current [device list](https://gadgetbridge.org/gadgets/)),
+so this same local backend works far beyond the Redmi Watch 4. Supported watch
+and band families include:
+
+| Vendor | Example models |
+| --- | --- |
+| **Xiaomi / Redmi** | Redmi Watch 3/4/5, Mi Band 4–9, Smart Band 7–9, Watch S1/S3, Mi Watch |
+| **Amazfit (Huami)** | Bip / Bip 3/5, GTR, GTS, T-Rex, Active, Balance, Band 5/7 |
+| **Huawei / Honor** | Watch GT 2/3/4, Band 6/7/8/9, Magic Watch, Honor Band |
+| **Garmin** | Forerunner, Fenix, Venu, Vívoactive, Instinct, Epix (+ HRM straps) |
+| **Fossil / Skagen** | Hybrid HR, Gen 6 |
+| **Pebble** | Pebble, Time, Time Steel, Round, Pebble 2 |
+| **Withings** | Steel HR, ScanWatch |
+| **Polar** | various HR-capable watches |
+| **Nothing / CMF** | CMF Watch Pro, Watch 2 |
+| **Casio** | G-Shock / GBD series |
+| **Open-source watches** | PineTime (Pine64), Bangle.js, wasp-os |
+| **Budget & niche** | Haylou, Colmi/Yawell, MyKronoz, Da Fit (Moyoung), SMA, HPlus, GloryFit, Lenovo, Sony, Soundbrenner, Ultrahuman, Coospo, FitPro, Keep Health, … |
+
+> Support level varies by model: many are fully supported, a few are partial
+> (some features still need the vendor app). Check the
+> [official list](https://gadgetbridge.org/gadgets/) for your exact model.
+
+To use a non-Xiaomi watch with Pawse, just pair it in Gadgetbridge — the
+[`gadgetbridge_client.py`](gadgetbridge_client.py) backend reads whatever the
+app has stored, regardless of brand.
 
 ---
 
