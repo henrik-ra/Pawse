@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
   "manifestVersion": "1.16",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "id": "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
   "developer": {
     "name": "Pawse Hackathon Team",
@@ -26,23 +26,36 @@
     {
       "entityId": "pawse-capture",
       "name": "Pawse",
-      "contentUrl": "https://pursue-psp-internet-stand.trycloudflare.com/teamsapp/index.html",
-      "websiteUrl": "https://pursue-psp-internet-stand.trycloudflare.com/teamsapp/index.html",
-      "scopes": ["personal"]
+      "contentUrl": "https://monitors-cooked-places-cuisine.trycloudflare.com/teamsapp/index.html",
+      "websiteUrl": "https://monitors-cooked-places-cuisine.trycloudflare.com/teamsapp/index.html",
+      "scopes": [
+        "personal"
+      ]
     }
   ],
   "configurableTabs": [
     {
-      "configurationUrl": "https://pursue-psp-internet-stand.trycloudflare.com/teamsapp/config.html",
+      "configurationUrl": "https://monitors-cooked-places-cuisine.trycloudflare.com/teamsapp/config.html",
       "canUpdateConfiguration": true,
-      "scopes": ["groupChat"],
-      "context": ["meetingSidePanel", "meetingChatTab", "meetingDetailsTab"]
+      "scopes": [
+        "groupChat"
+      ],
+      "context": [
+        "meetingSidePanel",
+        "meetingChatTab",
+        "meetingDetailsTab"
+      ]
     }
   ],
-  "permissions": ["identity", "messageTeamMembers"],
-  "devicePermissions": ["media"],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "devicePermissions": [
+    "media"
+  ],
   "validDomains": [
-    "pursue-psp-internet-stand.trycloudflare.com",
+    "monitors-cooked-places-cuisine.trycloudflare.com",
     "cdn.jsdelivr.net",
     "storage.googleapis.com",
     "res.cdn.office.net"

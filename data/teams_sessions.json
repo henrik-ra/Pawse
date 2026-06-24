@@ -115,5 +115,21 @@
     },
     "source": "pawse-teams-incall",
     "label": "Low strain"
+  },
+  {
+    "date": "2026-06-23",
+    "title": "Late sync (US team)",
+    "start": "19:00",
+    "end": "19:45",
+    "duration_min": 45,
+    "distress_score": 19,
+    "biomarkers": {
+      "fatigue": 31,
+      "emotion": 6,
+      "tension": 31,
+      "voice": 0
+    },
+    "source": "pawse-teams-app",
+    "label": "Low strain"
   }
 ]
