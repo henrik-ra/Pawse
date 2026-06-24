@@ -5,11 +5,11 @@
 // Saves the averaged session to the Pawse dashboard (/api/teams-sessions).
 
 import {
-  FaceLandmarker, FilesetResolver, DrawingUtils,
-} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.20";
+  FaceLandmarker, FilesetResolver,
+} from "./vendor/tasks-vision/vision_bundle.js";
 
-const MODEL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
-const WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.20/wasm";
+const MODEL = "./vendor/tasks-vision/face_landmarker.task";
+const WASM = "./vendor/tasks-vision/wasm";
 
 const WEIGHTS = { fatigue: 0.35, emotion: 0.25, tension: 0.20, voice: 0.20 };
 const RIGHT_EYE = [33, 160, 158, 133, 153, 144];
@@ -18,11 +18,12 @@ const BARS = [["fatigue", "Fatigue", "#6c5ce7"], ["emotion", "Emotion", "#ef5777
               ["tension", "Tension", "#e8553e"], ["voice", "Voice", "#4a90d9"]];
 
 const $ = id => document.getElementById(id);
+const setNote = t => { const n = $("note"); if (n) n.textContent = t; };
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
 const S = {
-  landmarker: null, video: $("video"), canvas: $("overlay"), ctx: null, draw: null,
+  landmarker: null, video: $("video"), canvas: $("overlay"), ctx: null,
   running: false, lastVideoTime: -1,
   // fatigue
   earOpen: 0.3, earSamples: [], calibFrames: 0, closedFrames: 0, blinks: 0,
@@ -75,12 +76,16 @@ async function loadMeeting() {
 // ---------------- Vision ----------------
 async function initVision() {
   const resolver = await FilesetResolver.forVisionTasks(WASM);
-  S.landmarker = await FaceLandmarker.createFromOptions(resolver, {
-    baseOptions: { modelAssetPath: MODEL, delegate: "GPU" },
-    outputFaceBlendshapes: true,
-    runningMode: "VIDEO",
-    numFaces: 1,
+  const opts = (delegate) => ({
+    baseOptions: { modelAssetPath: MODEL, delegate },
+    outputFaceBlendshapes: true, runningMode: "VIDEO", numFaces: 1,
   });
+  try {
+    S.landmarker = await FaceLandmarker.createFromOptions(resolver, opts("GPU"));
+  } catch (e) {
+    console.warn("GPU delegate failed, falling back to CPU", e);
+    S.landmarker = await FaceLandmarker.createFromOptions(resolver, opts("CPU"));
+  }
 }
 
 function blendMap(categories) {
@@ -232,12 +237,15 @@ function drawMesh(face, distress) {
   ctx.clearRect(0, 0, S.canvas.width, S.canvas.height);
   if (!face) return;
   const col = distressColor(distress);
-  S.draw.drawConnectors(face.pts, FaceLandmarker.FACE_LANDMARKS_TESSELATION,
-    { color: col + "66", lineWidth: 1 });
+  const w = S.canvas.width, h = S.canvas.height;
+  ctx.fillStyle = col;
+  for (let i = 0; i < face.pts.length; i += 3) ctx.fillRect(face.pts[i].x * w, face.pts[i].y * h, 1.6, 1.6);
+  ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.strokeRect(2, 2, w - 4, h - 4);
 }
 
 function loop() {
   if (!S.running && !S._previewing) return;
+  if (!S.landmarker) { requestAnimationFrame(loop); return; }
   const v = S.video;
   if (v.readyState >= 2 && v.currentTime !== S.lastVideoTime) {
     S.lastVideoTime = v.currentTime;
@@ -257,21 +265,43 @@ function loop() {
 
 // ---------------- Camera + lifecycle ----------------
 async function startCamera() {
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: true });
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: true });
+  } catch (e) {
+    // audio may be blocked -> retry video-only so the vision part still works
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+  }
   S.video.srcObject = stream;
-  await new Promise(r => (S.video.onloadedmetadata = r));
-  initAudio(stream);
+  await new Promise(r => { S.video.onloadedmetadata = () => { S.video.play().catch(() => {}); r(); }; });
+  if (stream.getAudioTracks().length) initAudio(stream);
   S._previewing = true;
   loop();
 }
 
-function beginCapture() {
+async function ensureStarted() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)
+    throw new Error("Camera API not available in this context");
+  if (!S.landmarker) { setNote("Loading Pawse vision model\u2026"); await initVision(); }
+  if (!S._previewing) { setNote("Requesting camera & microphone\u2026"); await startCamera(); }
+  setNote("Ready.");
+}
+
+async function beginCapture() {
+  $("startBtn").disabled = true; $("startBtn").textContent = "Starting\u2026";
+  try {
+    await ensureStarted();
+  } catch (e) {
+    setNote("Could not start: " + (e && e.message ? e.message : e) + " \u2014 allow camera/mic for this app, then click Start again.");
+    $("startBtn").disabled = false; $("startBtn").textContent = "Start capture";
+    return;
+  }
   S.acc = { fatigue: 0, emotion: 0, tension: 0, voice: 0 }; S.n = 0;
   S.startedAt = Date.now();
   S.running = true;
-  $("startBtn").disabled = true; $("startBtn").textContent = "Capturing…";
+  $("startBtn").textContent = "Capturing\u2026";
   $("saveBtn").disabled = false;
-  $("note").textContent = "Pawse is measuring. Click ‘End & save’ when the meeting ends.";
+  setNote("Pawse is measuring. Click \u2018End & save\u2019 when the meeting ends.");
 }
 
 function buildSession() {
@@ -326,7 +356,6 @@ function switchView(view) {
 // ---------------- Boot ----------------
 async function main() {
   S.ctx = S.canvas.getContext("2d");
-  S.draw = new DrawingUtils(S.ctx);
   document.querySelectorAll(".tab-btn").forEach(b => b.addEventListener("click", () => switchView(b.dataset.view)));
   $("startBtn").addEventListener("click", beginCapture);
   $("saveBtn").addEventListener("click", saveAndShow);
@@ -335,14 +364,12 @@ async function main() {
 
   initTeams();
   await loadMeeting();
-  $("note").textContent = "Loading Pawse vision model…";
   try {
-    await initVision();
-    await startCamera();
-    $("note").textContent = "Ready. Click ‘Start capture’ to begin measuring.";
+    await ensureStarted();
+    setNote("Ready. Click \u2018Start capture\u2019 to begin measuring.");
   } catch (e) {
-    $("note").textContent = "Camera/model error: " + e.message + " — allow camera access and reload.";
     console.error(e);
+    setNote("Tap \u2018Start capture\u2019 and allow camera/microphone. (" + (e && e.message ? e.message : e) + ")");
   }
 }
 main();
