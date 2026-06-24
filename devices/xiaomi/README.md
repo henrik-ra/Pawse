@@ -21,6 +21,21 @@ imports; it routes to [`gadgetbridge_client.py`](gadgetbridge_client.py).
 
 ## Run the dashboard against the Xiaomi watch
 
+**One command (server + live background sync):**
+
+```powershell
+.\start.ps1                          # → http://localhost:8000, auto-syncs the watch
+.\start.ps1 -IntervalSeconds 120     # slower sync cadence
+.\start.ps1 -NoSync                  # serve the existing DB only, no live pulling
+```
+
+`start.ps1` launches the [`sync_gadgetbridge.ps1`](sync_gadgetbridge.ps1) loop
+in the background (so the dashboard keeps getting fresh watch data) and the
+server in the foreground. Press Ctrl+C to stop both.
+
+**Server only** (serves whatever `Gadgetbridge.db` is already on disk — does
+*not* pull fresh data):
+
 ```powershell
 $env:PAWSE_WEARABLE = "xiaomi"       # use the Xiaomi watch instead of Google Health
 python server.py                     # → http://localhost:8000

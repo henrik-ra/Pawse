@@ -59,6 +59,7 @@ function render(result) {
   const label = result.label || labelFor(score);
 
   showMode(result.mode || w.mode || "demo", w.source || data.source);
+  showSource(result.mode || w.mode || "demo", w.source || data.source);
   renderHero(score, label, data, w);
   renderTiles(w, data);
   renderHrChart(w);
@@ -383,6 +384,16 @@ function showMode(mode, source) {
     el.textContent = device ? `○ Demo · ${device}` : "○ Demo data";
     el.className = "mode demo";
   }
+}
+
+// Keep the footer disclaimer in sync with the active wearable + live/demo state.
+function showSource(mode, source) {
+  const el = document.getElementById("sensor-source");
+  if (!el) return;
+  const device = deviceLabel(source) || "your wearable";
+  el.textContent = mode === "live"
+    ? `Sensor data is read live from ${device}.`
+    : `Showing demo data — no live ${device} connection.`;
 }
 
 // Stamp the header with the time of the latest successful data load so you can
