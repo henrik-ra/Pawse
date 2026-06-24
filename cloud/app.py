@@ -25,8 +25,9 @@ from typing import Any
 
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -251,6 +252,28 @@ def ingest_media(
 @app.get("/api/history")
 def history(userId: str = "me", days: int = 30) -> dict[str, Any]:
     return {"userId": userId, "days": days, "history": pawse_store.list_history(userId, days)}
+
+
+@app.post("/api/messages")
+async def messages(request: Request):
+    """Microsoft Teams bot endpoint (Azure Bot Service forwards activities here).
+
+    Inactive until the bot is configured (``MicrosoftAppId`` set), so the rest of
+    the API is unaffected before the Azure Bot resource exists.
+    """
+    try:
+        from . import pawse_bot
+    except Exception as exc:  # botbuilder not installed
+        raise HTTPException(status_code=503, detail=f"bot unavailable: {exc}")
+    if not pawse_bot.is_configured():
+        raise HTTPException(status_code=503, detail="Teams bot not configured")
+
+    body = await request.json()
+    auth_header = request.headers.get("Authorization", "")
+    invoke_response = await pawse_bot.process(auth_header, body)
+    if invoke_response is not None:
+        return JSONResponse(status_code=invoke_response.status, content=invoke_response.body)
+    return Response(status_code=201)
 
 
 # Serve the dashboard (app/) from the same origin as the API, so the relative
