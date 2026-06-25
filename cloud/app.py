@@ -32,6 +32,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
 from scoring.pawse_score import score_day
+from scoring.meeting_optimizer import recommend as recommend_meetings
 
 from . import pawse_store
 
@@ -252,6 +253,25 @@ def ingest_media(
 @app.get("/api/history")
 def history(userId: str = "me", days: int = 30) -> dict[str, Any]:
     return {"userId": userId, "days": days, "history": pawse_store.list_history(userId, days)}
+
+
+@app.get("/api/recommendations")
+def recommendations(userId: str = "me", date: str | None = None) -> dict[str, Any]:
+    """Concrete, actionable reschedule recommendations for a day.
+
+    Consumed by the dashboard / Teams bot (1-click Outlook deeplink) and by
+    Microsoft 365 Copilot Cowork, which executes the move on the user's behalf
+    (with the user's approval) using the structured fields.
+    """
+    date = date or _today()
+    stored = pawse_store.get_day(userId, date)
+    if stored is None:
+        stored = _score_and_store(_demo_day(userId, date), userId, date)
+    data = stored.get("data", {})
+    recs = recommend_meetings(
+        data.get("meetings", []), date=date, score=stored.get("pawse_score")
+    )
+    return {"userId": userId, "date": date, "recommendations": recs}
 
 
 @app.post("/api/messages")

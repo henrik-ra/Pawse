@@ -1,0 +1,80 @@
+openapi: 3.0.3
+info:
+  title: Pawse Recommendations API
+  version: 1.0.0
+  description: >
+    Energy- and calendar-aware reschedule recommendations for a workday.
+    Turn this spec into a Microsoft 365 Copilot Cowork plugin / connector so the
+    "Pawse Reschedule" skill can fetch live recommendations and execute them
+    (with the user's approval) via Cowork's Calendar Management skill.
+servers:
+  - url: https://ca-pawse-2ysupe36zqlhi.redstone-da7928c5.swedencentral.azurecontainerapps.io
+    description: Pawse production (use the ---test URL while validating)
+paths:
+  /api/recommendations:
+    get:
+      operationId: getRecommendations
+      summary: Get reschedule recommendations for a day
+      description: >
+        Returns concrete, actionable recommendations (protect focus, protect
+        lunch, ease back-to-back meetings, move after-hours meetings) derived
+        from the user's calendar and Pawse energy score.
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: string
+            default: me
+        - name: date
+          in: query
+          required: false
+          description: ISO date (YYYY-MM-DD). Defaults to today.
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Recommendations for the day
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RecommendationsResponse"
+components:
+  schemas:
+    RecommendationsResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+        date:
+          type: string
+          format: date
+        recommendations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Recommendation"
+    Recommendation:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [reschedule, add_buffer, protect_lunch, move_after_hours, protect_focus]
+        title:
+          type: string
+          description: Meeting title, or "Focus time" / "Lunch break" for new holds.
+        from:
+          type: string
+          nullable: true
+          description: Current start time HH:MM (null for new holds).
+        to:
+          type: string
+          description: Suggested new start time HH:MM.
+        end:
+          type: string
+          description: Suggested new end time HH:MM.
+        reason:
+          type: string
+        outlook_url:
+          type: string
+          description: 1-click Outlook deeplink fallback (no-Cowork path).
