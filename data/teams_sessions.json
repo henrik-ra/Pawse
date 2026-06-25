@@ -115,5 +115,21 @@
     },
     "source": "pawse-teams-incall",
     "label": "Low strain"
+  },
+  {
+    "date": "2026-06-25",
+    "title": "1:1 with manager",
+    "start": "11:30",
+    "end": "12:00",
+    "duration_min": 30,
+    "distress_score": 43,
+    "biomarkers": {
+      "fatigue": 40,
+      "emotion": 44,
+      "tension": 54,
+      "voice": 34
+    },
+    "source": "pawse-app",
+    "label": "Medium strain"
   }
 ]
