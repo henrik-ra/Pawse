@@ -123,4 +123,20 @@ def reset_pending_actions() -> dict[str, Any]:
 
 
 if __name__ == "__main__":
-    mcp.run()
+    import sys
+
+    if "--http" in sys.argv:
+        # Remote MCP over streamable HTTP — for Copilot Studio / cloud agents.
+        # Serves http://<host>:<port>/mcp. Default port 8765 (8000 is the web app).
+        # Override with:  python pawse_mcp.py --http --port 8765
+        port = 8765
+        if "--port" in sys.argv:
+            try:
+                port = int(sys.argv[sys.argv.index("--port") + 1])
+            except (ValueError, IndexError):
+                pass
+        mcp.settings.host = "127.0.0.1"
+        mcp.settings.port = port
+        mcp.run(transport="streamable-http")
+    else:
+        mcp.run()  # local stdio — Microsoft Scout, GitHub Copilot CLI
