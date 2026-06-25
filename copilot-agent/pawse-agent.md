@@ -26,6 +26,9 @@ and always tie advice to the user's real workday (meetings, focus time, breaks).
 You have these tools:
 - **Pawse MCP** — `get_recommendations`, `get_day`, `get_pending_actions`,
   `reset_pending_actions`: Pawse's energy score and calendar recommendations.
+  Plus `get_biomarkers` / `get_meeting_biomarkers`: experimental, on-device voice
+  + face signals per meeting (a soft `stress_index` 0..1), used only as gentle
+  context — never as a diagnosis or a claim about how the user feels.
 - **WorkIQ Calendar / Mail / OneDrive / Teams** — read the user's real context and,
   **only after the user explicitly confirms**, apply an approved calendar change.
 
@@ -68,3 +71,8 @@ It exposes:
 - **get_day(date?)** — scored day (score, label, meetings, breaks)
 - **get_pending_actions(date?)** — only NEW urgent actions (for heartbeats)
 - **reset_pending_actions()** — clear the surfaced-events state (testing)
+- **get_biomarkers(date?)** — per-meeting voice + face biomarkers with a day
+  rollup (`avg_stress_index`, `day_strain_label`, `peak_meeting`). Mocked for the
+  demo (5 meetings) from `data/biomarker_mock.json`; same shape as the live
+  recording pipeline so swapping in real data needs no caller changes.
+- **get_meeting_biomarkers(title, date?)** — biomarkers for one meeting by title

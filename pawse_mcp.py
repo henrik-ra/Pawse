@@ -18,6 +18,8 @@ Tools
 -----
 get_recommendations(date?)  → concrete reschedule suggestions for a day
 get_day(date?)              → the scored Pawse day (score, label, meetings, …)
+get_biomarkers(date?)       → per-meeting voice + face biomarkers (+ day rollup)
+get_meeting_biomarkers(...) → biomarkers for one meeting by title
 """
 from __future__ import annotations
 
@@ -120,6 +122,42 @@ def reset_pending_actions() -> dict[str, Any]:
 
     pawse_events.reset()
     return {"ok": True}
+
+
+@mcp.tool()
+def get_biomarkers(date: str | None = None) -> dict[str, Any]:
+    """Per-meeting voice + face biomarkers for a workday, with a day-level rollup.
+
+    For each meeting returns voice signals (F0, jitter, shimmer, HNR, spectral
+    shape, pitch variability, pause ratio) and face emotion mix, each summarized
+    into a ``stress_index`` (0..1, higher = more strain). The day rollup has
+    ``avg_stress_index``, ``day_strain_label`` and the ``peak_meeting``.
+
+    ``date`` is YYYY-MM-DD (defaults to today); if that day has no data it falls
+    back to the most recent available day so there is always something to read.
+
+    These are **experimental, on-device** signals — soft context for energy
+    coaching only, never a diagnosis or a claim about how the user feels.
+    """
+    import pawse_biomarkers
+
+    return pawse_biomarkers.for_date(date)
+
+
+@mcp.tool()
+def get_meeting_biomarkers(title: str, date: str | None = None) -> dict[str, Any]:
+    """Voice + face biomarkers for a single meeting by title (case-insensitive).
+
+    ``title`` is the meeting name (e.g. "Sprint planning"); ``date`` is optional
+    (YYYY-MM-DD). Returns ``{found: false}`` when no biomarkers exist for that
+    meeting. Same privacy caveat as ``get_biomarkers``: experimental on-device
+    context only, never a diagnosis."""
+    import pawse_biomarkers
+
+    m = pawse_biomarkers.for_meeting(title, date)
+    if m is None:
+        return {"found": False, "title": title, "date": date}
+    return {"found": True, **m}
 
 
 if __name__ == "__main__":
