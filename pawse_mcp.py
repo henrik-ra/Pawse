@@ -122,6 +122,61 @@ def reset_pending_actions() -> dict[str, Any]:
     return {"ok": True}
 
 
+@mcp.tool()
+def get_biomarkers(date: str | None = None) -> dict[str, Any]:
+    """The user's measured wellbeing biomarkers from Pawse's in-call recordings.
+
+    Each Teams meeting Pawse recorded yields a session with a distress score and
+    four biomarkers (0-100): fatigue, emotion (negativity), tension (facial),
+    voice (vocal stress). ``date`` is YYYY-MM-DD (defaults to today). Returns the
+    per-meeting sessions plus day averages. Only derived scores are stored — never
+    raw audio or video. If nothing was recorded yet, returns a small demo set.
+    """
+    from teams_sessions import sessions_for, label_for
+
+    res = sessions_for(date)
+    shown = res.get("sessions", [])
+
+    if not shown:
+        # Mock fallback so the agent always has biomarker data to talk about.
+        shown = [
+            {"title": "Project sync", "start": "09:30", "end": "10:30",
+             "distress_score": 45, "label": "Medium strain",
+             "biomarkers": {"fatigue": 40, "emotion": 38, "tension": 52, "voice": 44}},
+            {"title": "Customer call", "start": "13:00", "end": "14:00",
+             "distress_score": 68, "label": "High strain",
+             "biomarkers": {"fatigue": 61, "emotion": 64, "tension": 72, "voice": 70}},
+        ]
+        res = {"is_fallback": True}
+
+    keys = ("fatigue", "emotion", "tension", "voice")
+    avg_bio = {}
+    for k in keys:
+        vals = [float(s.get("biomarkers", {}).get(k, 0)) for s in shown]
+        avg_bio[k] = round(sum(vals) / len(vals)) if vals else 0
+    avg_distress = round(sum(float(s.get("distress_score", 0)) for s in shown) / len(shown)) if shown else 0
+
+    return {
+        "date": date,
+        "count": len(shown),
+        "avg_distress": avg_distress,
+        "label": label_for(avg_distress),
+        "avg_biomarkers": avg_bio,
+        "is_mock": bool(res.get("is_fallback")),
+        "sessions": [
+            {
+                "title": s.get("title"),
+                "start": s.get("start"),
+                "end": s.get("end"),
+                "distress_score": s.get("distress_score"),
+                "label": s.get("label"),
+                "biomarkers": s.get("biomarkers", {}),
+            }
+            for s in shown
+        ],
+    }
+
+
 if __name__ == "__main__":
     import sys
 
