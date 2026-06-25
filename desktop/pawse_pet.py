@@ -318,9 +318,10 @@ class PawsePet:
             c.create_text(24, 158, anchor="w", text=action_nudge(action),
                           fill="#2f7d3a", font=("Segoe UI", 12, "bold"),
                           width=CARD_W - 48, tags=("action",))
-            _url = action.get("outlook_url") or _API_BASE
+            # Click opens the full local dashboard (Rebalance card lives there),
+            # rather than jumping straight to Outlook.
             c.tag_bind("action", "<Button-1>",
-                       lambda e, u=_url: (webbrowser.open(u), self._close()))
+                       lambda e: (webbrowser.open(_API_BASE), self._close()))
         else:
             c.create_text(24, 158, anchor="w", text=nudge_for(score, steps), fill=INK,
                           font=("Segoe UI", 12), width=CARD_W - 48)
