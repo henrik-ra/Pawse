@@ -91,6 +91,25 @@ def nudge_for(score: int, steps) -> str:
     return "Nice flow — keep it up!"
 
 
+def fetch_top_action() -> dict | None:
+    """Top reschedule recommendation for today (None if the endpoint is absent)."""
+    try:
+        with urllib.request.urlopen(f"{_API_BASE}/api/recommendations", timeout=6) as resp:
+            recs = json.loads(resp.read().decode("utf-8")).get("recommendations", [])
+            return recs[0] if recs else None
+    except Exception:
+        return None
+
+
+def action_nudge(action: dict) -> str:
+    """Short, clickable nudge text for a reschedule recommendation."""
+    title = action.get("title", "Meeting")
+    to, end = action.get("to"), action.get("end")
+    if action.get("type") in ("protect_focus", "protect_lunch"):
+        return f"Protect {title.lower()} {to}–{end}  →"
+    return f"Move “{title}” to {to}  →"
+
+
 # --- Drawing helpers --------------------------------------------------------
 def round_rect(c: tk.Canvas, x1, y1, x2, y2, r, **kw):
     pts = [
@@ -293,9 +312,18 @@ class PawsePet:
         if azm is not None:
             px = draw_stat_pill(c, px, 124, f"{int(azm)} active min", INK, STAT_BG) + gap
 
-        # nudge
-        c.create_text(24, 158, anchor="w", text=nudge_for(score, steps), fill=INK,
-                      font=("Segoe UI", 12), width=CARD_W - 48)
+        # nudge — actionable when Pawse has a concrete suggestion, else a gentle tip
+        action = fetch_top_action()
+        if action:
+            c.create_text(24, 158, anchor="w", text=action_nudge(action),
+                          fill="#2f7d3a", font=("Segoe UI", 12, "bold"),
+                          width=CARD_W - 48, tags=("action",))
+            _url = action.get("outlook_url") or _API_BASE
+            c.tag_bind("action", "<Button-1>",
+                       lambda e, u=_url: (webbrowser.open(u), self._close()))
+        else:
+            c.create_text(24, 158, anchor="w", text=nudge_for(score, steps), fill=INK,
+                          font=("Segoe UI", 12), width=CARD_W - 48)
 
         # open-dashboard link (bottom-right)
         c.create_text(CARD_W - 24, 186, anchor="e", text="Open dashboard \u2192",
