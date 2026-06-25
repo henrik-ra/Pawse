@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
   "manifestVersion": "1.16",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "id": "3f2504e0-4f89-41d3-9a0c-0305e82c3301",
   "developer": {
     "name": "Pawse Hackathon Team",
@@ -26,8 +26,8 @@
     {
       "entityId": "pawse-capture",
       "name": "Pawse",
-      "contentUrl": "https://monitors-cooked-places-cuisine.trycloudflare.com/teamsapp/index.html",
-      "websiteUrl": "https://monitors-cooked-places-cuisine.trycloudflare.com/teamsapp/index.html",
+      "contentUrl": "https://trance-realize-strengths-mary.trycloudflare.com/teamsapp/index.html",
+      "websiteUrl": "https://trance-realize-strengths-mary.trycloudflare.com/teamsapp/index.html",
       "scopes": [
         "personal"
       ]
@@ -35,7 +35,7 @@
   ],
   "configurableTabs": [
     {
-      "configurationUrl": "https://monitors-cooked-places-cuisine.trycloudflare.com/teamsapp/config.html",
+      "configurationUrl": "https://trance-realize-strengths-mary.trycloudflare.com/teamsapp/config.html",
       "canUpdateConfiguration": true,
       "scopes": [
         "groupchat"
@@ -55,7 +55,7 @@
     "media"
   ],
   "validDomains": [
-    "monitors-cooked-places-cuisine.trycloudflare.com",
+    "trance-realize-strengths-mary.trycloudflare.com",
     "cdn.jsdelivr.net",
     "storage.googleapis.com",
     "res.cdn.office.net"
