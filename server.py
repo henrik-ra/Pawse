@@ -96,7 +96,11 @@ def _apply_actions(
     if not actions:
         return meetings, breaks, []
 
-    raw = [{"title": m["title"], "start": m["start"], "end": m["end"]} for m in meetings]
+    raw = [
+        {"title": m["title"], "start": m["start"], "end": m["end"],
+         "is_blocker": m.get("is_blocker", False)}
+        for m in meetings
+    ]
     breaks = dict(breaks or {})
     applied: list[dict[str, Any]] = []
     for a in actions:

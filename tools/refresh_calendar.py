@@ -21,6 +21,26 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[1]
 _CACHE = _ROOT / "data" / "calendar_cache.json"
+# The account whose calendar is pulled — used to tell "blocker" (personal block,
+# no other people) events apart from real meetings with attendees.
+_SELF_EMAIL = "t-hrathai@microsoft.com"
+
+
+def _is_blocker(ev: dict) -> bool:
+    """True if the event has no other human attendees — a personal block that is
+    safe to move (you can't unilaterally reschedule a meeting with other people).
+
+    Honors an explicit ``is_blocker`` field if present, else derives it from the
+    ``attendees`` list (room/equipment resources don't count as people).
+    """
+    if "is_blocker" in ev:
+        return bool(ev["is_blocker"])
+    others = [
+        a for a in (ev.get("attendees") or [])
+        if a.get("type") != "resource"
+        and (a.get("emailAddress") or {}).get("address", "").lower() != _SELF_EMAIL
+    ]
+    return not others
 
 
 def _local(iso_utc: str, offset_h: float) -> _dt.datetime:
@@ -47,6 +67,14 @@ def convert(events: list, offset_h: float) -> dict[str, list]:
     for ev in events:
         if ev.get("isAllDay"):
             continue
+        # Skip cancelled events — either the Graph ``isCancelled`` flag or a
+        # "Canceled:" / "Abgesagt:" subject prefix (used when the flag wasn't
+        # part of the WorkIQ $select). They are not real commitments.
+        if ev.get("isCancelled"):
+            continue
+        subject_lc = (ev.get("subject") or "").lstrip().lower()
+        if subject_lc.startswith(("canceled:", "cancelled:", "abgesagt:")):
+            continue
         start, end = ev.get("start"), ev.get("end")
         s_iso = start.get("dateTime") if isinstance(start, dict) else start
         e_iso = end.get("dateTime") if isinstance(end, dict) else end
@@ -56,9 +84,12 @@ def convert(events: list, offset_h: float) -> dict[str, list]:
         if s.date() != e.date():  # drop multi-day spans
             continue
         title = (ev.get("subject") or "Meeting").strip()
-        days.setdefault(s.strftime("%Y-%m-%d"), []).append(
-            {"title": title, "start": s.strftime("%H:%M"), "end": e.strftime("%H:%M")}
-        )
+        days.setdefault(s.strftime("%Y-%m-%d"), []).append({
+            "title": title,
+            "start": s.strftime("%H:%M"),
+            "end": e.strftime("%H:%M"),
+            "is_blocker": _is_blocker(ev),
+        })
     for d in days:
         days[d].sort(key=lambda m: m["start"])
     return days

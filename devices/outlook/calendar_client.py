@@ -56,6 +56,7 @@ def _derive_meetings(raw: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "end": m["end"],
             "back_to_back": back_to_back,
             "after_hours": after_hours,
+            "is_blocker": bool(m.get("is_blocker", False)),
         })
         prev_end = end if prev_end is None else max(prev_end, end)
     return out
