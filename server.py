@@ -26,7 +26,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
 
-from devices.outlook.calendar_client import get_meetings
+from devices.outlook.calendar_client import _derive_meetings, get_meetings
 from scoring.meeting_optimizer import recommend as recommend_meetings
 from scoring.pawse_score import score_day
 
@@ -44,6 +44,76 @@ _APP_DIR = _ROOT / "app"
 _SAMPLE = _ROOT / "data" / "alex_workday.json"
 
 PORT = 8000
+
+# Actions the user applied from the dashboard (move a meeting, protect lunch …).
+# Stored locally so the change is reflected everywhere — the Pawse Score, the
+# tiles and the Rebalance card all recompute as if the calendar had really
+# changed. Delete the file (or POST /api/reset-actions) to reset for a new take.
+_ACTIONS_PATH = _ROOT / "data" / ".applied_actions.json"
+_MOVE_TYPES = {"move_after_hours", "reschedule", "add_buffer"}
+
+
+def _load_actions() -> dict[str, list[dict[str, Any]]]:
+    try:
+        return json.loads(_ACTIONS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _save_actions(store: dict[str, list[dict[str, Any]]]) -> None:
+    _ACTIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _ACTIONS_PATH.write_text(json.dumps(store, indent=2), encoding="utf-8")
+
+
+def _record_action(date: str, action: dict[str, Any]) -> None:
+    store = _load_actions()
+    day = store.setdefault(date, [])
+    key = (action.get("type"), action.get("title"))
+    day[:] = [a for a in day if (a.get("type"), a.get("title")) != key]
+    day.append(action)
+    _save_actions(store)
+
+
+def _clear_actions(date: str | None = None) -> None:
+    if date is None:
+        _save_actions({})
+        return
+    store = _load_actions()
+    store.pop(date, None)
+    _save_actions(store)
+
+
+def _apply_actions(
+    meetings: list[dict[str, Any]], breaks: dict[str, Any], date: str
+) -> tuple[list[dict[str, Any]], dict[str, Any], list[dict[str, Any]]]:
+    """Reflect the user's applied actions in the day's meetings + breaks.
+
+    Moves rewrite the meeting's start/end (flags are re-derived so back-to-back /
+    after-hours and the Pawse Score recompute); lunch holds mark the break as
+    protected. Returns ``(meetings, breaks, applied)``.
+    """
+    actions = _load_actions().get(date, [])
+    if not actions:
+        return meetings, breaks, []
+
+    raw = [{"title": m["title"], "start": m["start"], "end": m["end"]} for m in meetings]
+    breaks = dict(breaks or {})
+    applied: list[dict[str, Any]] = []
+    for a in actions:
+        kind = a.get("type")
+        if kind in _MOVE_TYPES and a.get("to") and a.get("end"):
+            for r in raw:
+                if r["title"] == a.get("title"):
+                    r["start"], r["end"] = a["to"], a["end"]
+                    applied.append(a)
+                    break
+        elif kind == "protect_lunch":
+            breaks["lunch_break"] = True
+            applied.append(a)
+        elif kind == "protect_focus":
+            applied.append(a)
+
+    return _derive_meetings(raw), breaks, applied
 
 
 def build_live_day(date: str | None = None) -> dict[str, Any]:
@@ -66,9 +136,13 @@ def build_live_day(date: str | None = None) -> dict[str, Any]:
     # Real calendar (meetings + breaks) for this date, pulled from Microsoft 365
     # via WorkIQ and cached. Falls back to the sample day when not cached.
     calendar = get_meetings(date)
-    day["meetings"] = calendar["meetings"]
-    day["breaks"] = calendar["breaks"]
+    meetings, breaks, applied = _apply_actions(
+        calendar["meetings"], calendar["breaks"], date
+    )
+    day["meetings"] = meetings
+    day["breaks"] = breaks
     day["calendar_source"] = calendar["calendar_source"]
+    day["applied_actions"] = applied
 
     result = score_day(day)
     result["data"] = day
@@ -86,6 +160,16 @@ class _Handler(SimpleHTTPRequestHandler):
             self._serve_recommendations()
             return
         super().do_GET()
+
+    def do_POST(self):  # noqa: N802 (http.server API)
+        if self.path.startswith("/api/apply"):
+            self._apply_action()
+            return
+        if self.path.startswith("/api/reset-actions"):
+            self._reset_actions()
+            return
+        self.send_response(404)
+        self.end_headers()
 
     def _serve_live_day(self) -> None:
         try:
@@ -141,6 +225,59 @@ class _Handler(SimpleHTTPRequestHandler):
             self.wfile.write(body)
         except (ConnectionError, OSError):
             pass
+
+    def _read_json_body(self) -> dict[str, Any]:
+        length = int(self.headers.get("Content-Length", 0) or 0)
+        if length <= 0:
+            return {}
+        try:
+            return json.loads(self.rfile.read(length) or b"{}")
+        except Exception:
+            return {}
+
+    def _write_json(self, payload: dict[str, Any], status: int = 200) -> None:
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except (ConnectionError, OSError):
+            pass
+
+    def _apply_action(self) -> None:
+        """Record a one-click action from the dashboard and recompute the day."""
+        try:
+            payload = self._read_json_body()
+            date = payload.get("date") or _dt.date.today().isoformat()
+            action = {
+                "type": payload.get("type"),
+                "title": payload.get("title"),
+                "from": payload.get("from"),
+                "to": payload.get("to"),
+                "end": payload.get("end"),
+            }
+            _record_action(date, action)
+            day = build_live_day(date)
+            self._write_json({
+                "ok": True,
+                "date": date,
+                "applied": action,
+                "pawse_score": day.get("pawse_score"),
+                "label": day.get("label"),
+            })
+        except Exception as exc:
+            self._write_json({"ok": False, "error": str(exc)}, status=500)
+
+    def _reset_actions(self) -> None:
+        try:
+            payload = self._read_json_body()
+            _clear_actions(payload.get("date"))
+            self._write_json({"ok": True})
+        except Exception as exc:
+            self._write_json({"ok": False, "error": str(exc)}, status=500)
 
     def log_message(self, fmt, *args):  # noqa: N802 (http.server API)
         pass  # quiet access log; errors still print

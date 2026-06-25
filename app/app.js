@@ -116,6 +116,11 @@ const REBALANCE_VERB = {
   protect_focus: "Protect focus", protect_lunch: "Protect lunch",
   reschedule: "Move meeting", move_after_hours: "Move into day", add_buffer: "Add buffer",
 };
+const REBALANCE_DONE = {
+  protect_focus: "focus time protected", protect_lunch: "lunch break protected",
+  reschedule: "meeting moved", move_after_hours: "moved into your day \u2014 evening protected",
+  add_buffer: "buffer added",
+};
 
 async function renderRebalance(date) {
   const card = document.getElementById("rebalanceCard");
@@ -150,12 +155,11 @@ async function renderRebalance(date) {
       reason.textContent = r.reason || "";
       text.append(title, reason);
 
-      const action = document.createElement("a");
+      const action = document.createElement("button");
+      action.type = "button";
       action.className = "rb-action";
-      action.href = r.outlook_url || "#";
-      action.target = "_blank";
-      action.rel = "noopener";
       action.textContent = `${REBALANCE_VERB[r.type] || "Adjust"} \u2192`;
+      action.addEventListener("click", () => applyAction(r, date, action, li));
 
       li.append(ico, text, action);
       list.appendChild(li);
@@ -166,6 +170,51 @@ async function renderRebalance(date) {
   } catch (_) {
     card.hidden = true;
   }
+}
+
+// Apply a reschedule action: tell the local server to move it, then re-fetch so
+// the score, tiles and meetings all reflect the change. This is the visible
+// "detect \u2192 propose \u2192 act" loop \u2014 one click really rebalances the day.
+async function applyAction(r, date, button, li) {
+  button.disabled = true;
+  const original = button.textContent;
+  button.textContent = "Working\u2026";
+  li.classList.add("applying");
+  try {
+    const resp = await fetch("/api/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date, type: r.type, title: r.title,
+        from: r.from, to: r.to, end: r.end,
+      }),
+    });
+    if (!resp.ok) throw new Error("apply");
+    button.textContent = "\u2713 Done";
+    li.classList.add("done");
+    showToast(`\u2713 ${r.title} \u2014 ${REBALANCE_DONE[r.type] || "updated"}`);
+    setTimeout(() => fetchDay(date), 750);
+  } catch (_) {
+    button.disabled = false;
+    button.textContent = original;
+    li.classList.remove("applying");
+    showToast("Couldn't apply \u2014 is the local server running?");
+  }
+}
+
+let _toastTimer = null;
+function showToast(msg) {
+  let el = document.getElementById("pawseToast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "pawseToast";
+    el.className = "toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
 }
 
 // ---- Breathing exercise -----------------------------------------------------

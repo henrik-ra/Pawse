@@ -46,14 +46,30 @@
 .rb-action {
   flex: 0 0 auto; text-decoration: none; white-space: nowrap;
   background: var(--bamboo); color: #fff; font-weight: 700; font-size: 0.85rem;
-  padding: 9px 15px; border-radius: 999px;
+  padding: 9px 15px; border-radius: 999px; border: 0; cursor: pointer;
+  font-family: inherit;
   box-shadow: var(--shadow-sm); transition: transform .12s ease, background .12s ease;
 }
-.rb-action:hover { background: var(--bamboo-dark); transform: translateY(-1px); }
+.rb-action:hover:not(:disabled) { background: var(--bamboo-dark); transform: translateY(-1px); }
+.rb-action:disabled { opacity: .75; cursor: default; }
+.rebalance-item.applying { opacity: .8; }
+.rebalance-item.done { opacity: .5; }
 @media (max-width: 560px) {
   .rebalance-item { flex-wrap: wrap; }
   .rb-action { width: 100%; text-align: center; }
 }
+
+/* one-click apply confirmation toast */
+.toast {
+  position: fixed; left: 50%; bottom: 28px;
+  transform: translateX(-50%) translateY(16px);
+  background: var(--bamboo-dark); color: #fff;
+  padding: 12px 20px; border-radius: 999px; font-weight: 600; font-size: 0.9rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .22);
+  opacity: 0; pointer-events: none; z-index: 9999;
+  transition: opacity .2s ease, transform .2s ease;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
 * { box-sizing: border-box; }
 
