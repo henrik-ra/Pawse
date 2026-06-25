@@ -107,6 +107,67 @@ function renderHero(score, label, data, w) {
   if (breatheBtn) breatheBtn.classList.toggle("urgent", score >= 70);
 }
 
+// ---- Rebalance your day (actionable reschedule suggestions) ----------------
+const REBALANCE_ICON = {
+  protect_focus: "🛡️", protect_lunch: "🥗", reschedule: "📅",
+  move_after_hours: "🌙", add_buffer: "⏳",
+};
+const REBALANCE_VERB = {
+  protect_focus: "Protect focus", protect_lunch: "Protect lunch",
+  reschedule: "Move meeting", move_after_hours: "Move into day", add_buffer: "Add buffer",
+};
+
+async function renderRebalance(date) {
+  const card = document.getElementById("rebalanceCard");
+  const list = document.getElementById("rebalanceList");
+  if (!card || !list) return;
+  try {
+    const res = await fetch(`/api/recommendations?date=${encodeURIComponent(date)}`, { cache: "no-store" });
+    if (!res.ok) throw new Error("api");
+    const recs = (await res.json()).recommendations || [];
+    if (!recs.length) { card.hidden = true; return; }
+
+    list.textContent = "";
+    for (const r of recs) {
+      const li = document.createElement("li");
+      li.className = "rebalance-item";
+
+      const ico = document.createElement("span");
+      ico.className = "rb-ico";
+      ico.textContent = REBALANCE_ICON[r.type] || "•";
+
+      const text = document.createElement("span");
+      text.className = "rb-text";
+      const title = document.createElement("span");
+      title.className = "rb-title";
+      title.textContent = r.title || "Adjust";
+      const when = document.createElement("span");
+      when.className = "rb-when";
+      when.textContent = r.from ? `${r.from} \u2192 ${r.to}` : `${r.to}\u2013${r.end}`;
+      title.appendChild(when);
+      const reason = document.createElement("span");
+      reason.className = "rb-reason";
+      reason.textContent = r.reason || "";
+      text.append(title, reason);
+
+      const action = document.createElement("a");
+      action.className = "rb-action";
+      action.href = r.outlook_url || "#";
+      action.target = "_blank";
+      action.rel = "noopener";
+      action.textContent = `${REBALANCE_VERB[r.type] || "Adjust"} \u2192`;
+
+      li.append(ico, text, action);
+      list.appendChild(li);
+    }
+    document.getElementById("rebalanceSub").textContent =
+      `${recs.length} suggestion${recs.length > 1 ? "s" : ""}`;
+    card.hidden = false;
+  } catch (_) {
+    card.hidden = true;
+  }
+}
+
 // ---- Breathing exercise -----------------------------------------------------
 let _breathTimer = null;
 
@@ -585,6 +646,7 @@ async function fetchDay(date, { silent = false } = {}) {
       const result = await res.json();
       if (!result.error) {
         render(result);
+        renderRebalance(date);
         recordHistory(date, result.pawse_score ?? result.score, result.label);
         renderTrend();
         return;
