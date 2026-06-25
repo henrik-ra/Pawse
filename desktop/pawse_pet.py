@@ -33,6 +33,7 @@ import tkinter.font as tkfont
 import urllib.request
 import webbrowser
 from datetime import datetime
+from pathlib import Path
 
 # --- Config -----------------------------------------------------------------
 # The pet reads the cloud dashboard by default, so it works without a local
@@ -46,23 +47,33 @@ DEFAULT_INTERVAL_MIN = 30        # minutes between pop-ups
 VISIBLE_SECONDS = 12             # how long the panda stays on screen
 WORK_HOURS = (8, 20)            # only appear between these local hours
 JITTER_MIN = 8                   # +/- random minutes so it feels organic
-CARD_W, CARD_H = 392, 206
+CARD_W, CARD_H = 360, 212
 MARGIN = 22                      # gap from screen edges
 TASKBAR_PAD = 48                 # leave room above the taskbar
 TRANSPARENT = "#010203"          # this colour becomes see-through (Windows)
 
-# Theme (matches the dashboard)
-BG = "#ffffff"
+# Optional per-mood panda PNGs (panda_good/_med/_bad.png) override the drawing.
+PANDA_IMAGE_DIR = Path(__file__).resolve().parent / "assets"
+
+# Theme — pastel purple card with pastel blue accent elements.
+BG = "#ece7fb"          # pastel purple card surface
+SURFACE = "#d9e5fc"     # pastel blue for chips / badges / buttons
+CARD_EDGE = "#d8ccf2"   # soft purple card outline
+SHADOW = "#ccc0ee"      # purple-tinted drop shadow
+DIVIDER = "#cdd9f2"     # pastel blue hairline
 INK = "#232826"
-INK_SOFT = "#5c6360"
-RING_BG = "#e8e2d4"
-GOOD, WARN, BAD = "#2ecc71", "#f4b740", "#e8553e"
-PANDA_BLACK = "#1b1c1e"
-SHADOW = "#e4ded2"               # soft drop shadow (tkinter has no alpha)
-HAIRLINE = "#efeae0"             # subtle divider
-MOOD_SOFT = {"good": "#e9f7ee", "med": "#fdf4e0", "bad": "#fdecea"}
-STAT_BG = "#f1ede2"              # soft taupe stat pills
-BORDER = "#1b1c1e"              # thin black popup border
+INK_SOFT = "#d97aa9"     # pastel pink — chip text & close mark
+RING_BG = "#e3dcf6"
+GOOD, WARN, BAD = "#6f9eea", "#9a7fe0", "#e87ab0"
+BRAND = "#6c5ab6"        # deep pastel purple for the wordmark
+
+# Panda palette (purple fur, pink cheeks).
+PANDA_FUR = "#c3b2ee"
+PANDA_EDGE = "#b6a6e4"
+PANDA_FACE = "#fbfaff"
+CHEEK = "#f6b6d2"
+HP_BLUE = "#9cc0f3"
+EYE = "#3b3550"
 
 
 # --- Data -------------------------------------------------------------------
@@ -129,48 +140,97 @@ def round_rect(c: tk.Canvas, x1, y1, x2, y2, r, **kw):
 
 
 def draw_panda(c: tk.Canvas, cx: float, cy: float, r: float, mood: str):
-    """Draw a compact, mood-reactive panda face centred at (cx, cy)."""
-    er = r * 0.42  # ear radius
-    # ears
-    for ex in (cx - r * 0.62, cx + r * 0.62):
-        c.create_oval(ex - er, cy - r * 0.95, ex + er, cy - r * 0.95 + 2 * er,
-                      fill=PANDA_BLACK, outline="")
-    # head
-    c.create_oval(cx - r, cy - r, cx + r, cy + r, fill="#fdfdfd", outline="#e7e2d6", width=2)
-    # eye patches
+    """A compact, modern panda whose face reacts to the day's mood.
+
+    good -> smiling eyes + grin, med -> calm, bad -> tired droopy eyes + "Zzz".
+    Styled in the pastel palette, echoing the logo's purple fur and pink cheeks.
+    """
+    # Ears (pastel purple).
+    er = r * 0.46
+    for ex in (cx - r * 0.64, cx + r * 0.64):
+        c.create_oval(ex - er, cy - r * 1.00, ex + er, cy - r * 1.00 + 2 * er,
+                      fill=PANDA_FUR, outline="")
+    # Head (near-white).
+    c.create_oval(cx - r, cy - r, cx + r, cy + r, fill=PANDA_FACE, outline=PANDA_EDGE, width=2)
+    # Eye patches (pastel purple).
     for sx in (-1, 1):
-        px = cx + sx * r * 0.42
+        px = cx + sx * r * 0.40
         c.create_oval(px - r * 0.30, cy - r * 0.34, px + r * 0.30, cy + r * 0.22,
-                      fill=PANDA_BLACK, outline="")
-    # eyes + highlight
+                      fill=PANDA_FUR, outline="")
+    # Cheeks (a little pink blush, always).
     for sx in (-1, 1):
-        px = cx + sx * r * 0.42
-        c.create_oval(px - r * 0.11, cy - r * 0.16, px + r * 0.11, cy + r * 0.06,
-                      fill="#101010", outline="")
-        c.create_oval(px - r * 0.02, cy - r * 0.12, px + r * 0.06, cy - r * 0.04,
-                      fill="#ffffff", outline="")
-    # nose
-    c.create_oval(cx - r * 0.12, cy + r * 0.26, cx + r * 0.12, cy + r * 0.42,
-                  fill=PANDA_BLACK, outline="")
-    # rosy blush (always — keeps the panda friendly)
-    for sx in (-1, 1):
-        c.create_oval(cx + sx * r * 0.62 - 6, cy + r * 0.30 - 4,
-                      cx + sx * r * 0.62 + 6, cy + r * 0.30 + 4,
-                      fill="#ffc2cf", outline="")
-    # mouth by mood
+        bx = cx + sx * r * 0.60
+        c.create_oval(bx - 5, cy + r * 0.24 - 4, bx + 5, cy + r * 0.24 + 4,
+                      fill=CHEEK, outline="")
+    # Nose.
+    c.create_oval(cx - r * 0.11, cy + r * 0.20, cx + r * 0.11, cy + r * 0.35,
+                  fill=EYE, outline="")
+
+    # --- Mood-reactive eyes + mouth ---
     my = cy + r * 0.52
     if mood == "good":
-        c.create_arc(cx - r * 0.26, my - r * 0.22, cx + r * 0.26, my + r * 0.22,
-                     start=200, extent=140, style="arc", outline=INK, width=2)
+        # Smiling (closed) eyes and a wide grin.
+        for sx in (-1, 1):
+            px = cx + sx * r * 0.40
+            c.create_arc(px - r * 0.16, cy - r * 0.10, px + r * 0.16, cy + r * 0.16,
+                         start=200, extent=140, style="arc", outline=EYE, width=2)
+        c.create_arc(cx - r * 0.26, my - r * 0.24, cx + r * 0.26, my + r * 0.22,
+                     start=200, extent=140, style="arc", outline=EYE, width=2)
     elif mood == "med":
-        c.create_line(cx - r * 0.18, my, cx + r * 0.18, my, fill=INK, width=2)
-    else:  # bad — frown, worried brows, sweat drop
-        c.create_arc(cx - r * 0.26, my, cx + r * 0.26, my + r * 0.40,
-                     start=20, extent=140, style="arc", outline=INK, width=2)
-        c.create_line(cx - r * 0.62, cy - r * 0.40, cx - r * 0.30, cy - r * 0.26, fill=INK, width=2)
-        c.create_line(cx + r * 0.62, cy - r * 0.40, cx + r * 0.30, cy - r * 0.26, fill=INK, width=2)
-        c.create_oval(cx + r * 0.86, cy - r * 0.30, cx + r * 0.86 + 8, cy - r * 0.30 + 12,
-                      fill="#4aa3e0", outline="")
+        # Calm round eyes + a small neutral mouth.
+        for sx in (-1, 1):
+            px = cx + sx * r * 0.40
+            c.create_oval(px - r * 0.10, cy - r * 0.10, px + r * 0.10, cy + r * 0.12,
+                          fill=EYE, outline="")
+        c.create_line(cx - r * 0.16, my, cx + r * 0.16, my, fill=EYE, width=2)
+    else:  # bad — tired / exhausted: droopy half-closed eyes, under-eye bags, a weary sigh.
+        for sx in (-1, 1):
+            px = cx + sx * r * 0.40
+            c.create_arc(px - r * 0.16, cy - r * 0.12, px + r * 0.16, cy + r * 0.14,
+                         start=20, extent=140, style="arc", outline=EYE, width=2)
+            c.create_arc(px - r * 0.13, cy + r * 0.04, px + r * 0.13, cy + r * 0.22,
+                         start=200, extent=140, style="arc", outline=PANDA_EDGE, width=1)
+        c.create_line(cx - r * 0.16, my + r * 0.04, cx + r * 0.16, my + r * 0.04,
+                      fill=EYE, width=2)
+        for (dx, dy, sz) in ((0.66, -0.52, 7), (0.92, -0.80, 8), (1.20, -1.08, 10)):
+            c.create_text(cx + r * dx, cy + r * dy, text="z", fill=EYE,
+                          font=("Segoe UI", sz, "bold"))
+
+
+# Cache resized Tk images so the PNG is only read from disk once per size.
+_PANDA_CACHE: dict[tuple[str, int], object] = {}
+
+
+def panda_image(mood: str, r: float):
+    """Optional mood-specific panda PNG, or None to draw the panda instead.
+
+    Looks for panda_good/_med/_bad.png in desktop/assets/. When none exists
+    (the default), returns None so the expressive vector panda is drawn.
+    """
+    key = (mood, int(r))
+    if key in _PANDA_CACHE:
+        return _PANDA_CACHE[key]
+    result = None
+    try:
+        from PIL import Image, ImageTk
+
+        path = next(
+            (p for p in (PANDA_IMAGE_DIR / f"panda_{mood}.png",) if p.exists()),
+            None,
+        )
+        if path is not None:
+            img = Image.open(path).convert("RGBA")
+            try:
+                resample = Image.Resampling.LANCZOS
+            except AttributeError:  # older Pillow
+                resample = Image.LANCZOS
+            tw = max(1, int(2.6 * r))
+            th = max(1, int(img.height * tw / img.width))
+            result = ImageTk.PhotoImage(img.resize((tw, th), resample))
+    except Exception:
+        result = None
+    _PANDA_CACHE[key] = result
+    return result
 
 
 def draw_ring(c: tk.Canvas, cx: float, cy: float, r: float, score: int):
@@ -283,53 +343,62 @@ class PawsePet:
         if azm is None:
             azm = wearable.get("active_minutes")
 
-        # soft shadow + clean white card (no hard border)
-        round_rect(c, 11, 15, CARD_W - 3, CARD_H - 3, 20, fill=SHADOW, outline="")
-        round_rect(c, 7, 8, CARD_W - 7, CARD_H - 9, 20, fill=BG, outline="")
+        # soft drop shadow + pastel card
+        round_rect(c, 10, 13, CARD_W - 3, CARD_H - 3, 26, fill=SHADOW, outline="")
+        round_rect(c, 6, 6, CARD_W - 6, CARD_H - 9, 26, fill=BG, outline=CARD_EDGE)
 
-        # panda inside its mood aura ring
-        draw_progress_ring(c, 64, 66, 40, score, width=7)
-        draw_panda(c, 64, 66, 26, mood)
+        # panda tucked into the top-left; its face reacts to the day
+        self._draw_panda_on(c, 50, 44, 26, mood)
 
-        # title + mood pill
-        c.create_text(116, 46, anchor="w", text="Pawse", fill=INK,
-                      font=("Segoe UI", 18, "bold"))
-        draw_stat_pill(c, 116, 74, (label or "—").upper(), accent,
-                       MOOD_SOFT.get(mood, "#eeeeee"), size=8)
+        # score ring, top-right
+        draw_ring(c, CARD_W - 58, 52, 24, score)
 
-        # big score (right) + close button (corner)
-        c.create_text(CARD_W - 26, 60, anchor="e", text=str(score), fill=accent,
-                      font=("Segoe UI", 30, "bold"))
-        clx, cly = CARD_W - 22, 26
-        c.create_oval(clx - 9, cly - 9, clx + 9, cly + 9, fill="#e8553e", outline="", tags=("close",))
-        c.create_text(clx, cly, text="\u00d7", fill="white", font=("Segoe UI", 11, "bold"), tags=("close",))
+        # close (X) button, top-right corner
+        bx, by, br = CARD_W - 20, 18, 9
+        c.create_oval(bx - br, by - br, bx + br, by + br, fill=SURFACE,
+                      outline=CARD_EDGE, tags=("close",))
+        c.create_text(bx, by, text="\u2715", fill=INK_SOFT,
+                      font=("Segoe UI", 8, "bold"), tags=("close",))
 
-        # stat pills row (steps · bpm · active min)
-        px, gap = 24, 8
+        # brand wordmark + status badge
+        c.create_text(96, 34, anchor="w", text="Pawse", fill=BRAND,
+                      font=("Segoe UI", 14, "bold"))
+        self._badge(c, 96, 58, (label or "").upper(), accent)
+
+        # hairline divider under the header
+        c.create_line(20, 82, CARD_W - 20, 82, fill=DIVIDER)
+
+        # the most important metrics, as pastel chips
+        chips = []
         if steps is not None:
-            px = draw_stat_pill(c, px, 124, f"{int(steps):,} steps", INK, STAT_BG) + gap
+            chips.append(f"{int(steps):,} steps")
         if hr:
-            px = draw_stat_pill(c, px, 124, f"{int(hr)} bpm", INK, STAT_BG) + gap
+            chips.append(f"{int(hr)} bpm")
         if azm is not None:
-            px = draw_stat_pill(c, px, 124, f"{int(azm)} active min", INK, STAT_BG) + gap
+            chips.append(f"{int(azm)} active min")
+        x = 22
+        for chip in chips[:3]:
+            x = self._chip(c, x, 104, chip)
+            if x > CARD_W - 40:
+                break
 
         # nudge — actionable when Pawse has a concrete suggestion, else a gentle tip
         action = fetch_top_action()
         if action:
-            c.create_text(24, 158, anchor="w", text=action_nudge(action),
-                          fill="#2f7d3a", font=("Segoe UI", 12, "bold"),
-                          width=CARD_W - 48, tags=("action",))
-            # Click opens the full local dashboard (Rebalance card lives there),
-            # rather than jumping straight to Outlook.
+            c.create_text(22, 128, anchor="nw", text=action_nudge(action),
+                          fill=BRAND, font=("Segoe UI", 12, "bold"),
+                          width=CARD_W - 44, tags=("action",))
+            # Click opens the full dashboard (the Rebalance card lives there).
             c.tag_bind("action", "<Button-1>",
                        lambda e: (webbrowser.open(_API_BASE), self._close()))
         else:
-            c.create_text(24, 158, anchor="w", text=nudge_for(score, steps), fill=INK,
-                          font=("Segoe UI", 12), width=CARD_W - 48)
+            c.create_text(22, 128, anchor="nw", text=nudge_for(score, steps),
+                          fill=INK, font=("Segoe UI", 12), width=CARD_W - 44)
 
-        # open-dashboard link (bottom-right)
-        c.create_text(CARD_W - 24, 186, anchor="e", text="Open dashboard \u2192",
-                      fill=INK_SOFT, font=("Segoe UI", 10, "bold"), tags=("dash",))
+        # footer — opens the dashboard
+        c.create_text(CARD_W - 22, CARD_H - 20, anchor="e",
+                      text="Open dashboard  \u2192", fill=accent,
+                      font=("Segoe UI", 8, "bold"), tags=("dash",))
 
         c.tag_bind("close", "<Button-1>", lambda e: self._close())
         c.tag_bind("dash", "<Button-1>", lambda e: (webbrowser.open(_API_BASE), self._close()))
@@ -341,6 +410,35 @@ class PawsePet:
         top.geometry(f"{CARD_W}x{CARD_H}+{self._x}+{start_y}")
         self._slide_in(start_y)
         self.root.after(VISIBLE_SECONDS * 1000, self._close)
+
+    def _draw_panda_on(self, c: tk.Canvas, cx: float, cy: float, r: float, mood: str):
+        img = panda_image(mood, r)
+        if img is not None:
+            self._panda_img = img  # keep a reference so Tk doesn't garbage-collect it
+            c.create_image(cx, cy, image=img)
+        else:
+            draw_panda(c, cx, cy, r, mood)
+
+    def _chip(self, c: tk.Canvas, x: float, y: float, text: str) -> float:
+        """Draw a rounded metric pill at (x, y) and return the next start x."""
+        pad = 12
+        t = c.create_text(x + pad, y, anchor="w", text=text, fill=INK_SOFT,
+                          font=("Segoe UI", 11, "bold"))
+        right = c.bbox(t)[2] + pad
+        rect = round_rect(c, x, y - 15, right, y + 15, 15, fill=SURFACE, outline="")
+        c.tag_lower(rect, t)
+        return right + 8
+
+    def _badge(self, c: tk.Canvas, x: float, y: float, text: str, color: str) -> None:
+        """Draw a small tinted status badge (e.g. the strain label)."""
+        if not text:
+            return
+        pad = 9
+        t = c.create_text(x + pad, y, anchor="w", text=text, fill=color,
+                          font=("Segoe UI", 8, "bold"))
+        rect = round_rect(c, x, y - 11, c.bbox(t)[2] + pad, y + 11, 11,
+                          fill=SURFACE, outline="")
+        c.tag_lower(rect, t)
 
     def _slide_in(self, y: int):
         if self._popup is None:
