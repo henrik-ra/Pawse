@@ -41,6 +41,8 @@ data/.applied_actions.json
 data/.task_queue.json
 data/.mcp_server.log
 data/.mcp_server.err.log
+data/.dashboard.log
+data/.dashboard.err.log
 
 # WorkIQ calendar exports (transient, may contain personal meeting data)
 data/_workiq_*.json
