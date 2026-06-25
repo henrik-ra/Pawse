@@ -8,8 +8,13 @@ info:
     "Pawse Reschedule" skill can fetch live recommendations and execute them
     (with the user's approval) via Cowork's Calendar Management skill.
 servers:
-  - url: https://ca-pawse-2ysupe36zqlhi.redstone-da7928c5.swedencentral.azurecontainerapps.io
-    description: Pawse production (use the ---test URL while validating)
+  # Cowork runs in the cloud and cannot reach localhost directly. Expose your
+  # local server (python server.py on :8000) with a public dev tunnel and put
+  # that URL here. Only needed for the live plugin path — the "paste JSON" path
+  # needs no tunnel at all.
+  - url: https://REPLACE-WITH-YOUR-TUNNEL.devtunnels.ms
+    description: Public dev tunnel forwarding to your local Pawse server (localhost:8000)
+  # - url: http://localhost:8000   # local testing only (not reachable by Cowork)
 paths:
   /api/recommendations:
     get:

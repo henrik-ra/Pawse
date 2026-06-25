@@ -27,6 +27,7 @@ from typing import Any
 
 from devices.google_health.google_health_client import get_daily_signals, prewarm
 from devices.outlook.calendar_client import get_meetings
+from scoring.meeting_optimizer import recommend as recommend_meetings
 from scoring.pawse_score import score_day
 
 _ROOT = Path(__file__).resolve().parent
@@ -72,6 +73,9 @@ class _Handler(SimpleHTTPRequestHandler):
         if self.path.startswith("/api/live-day"):
             self._serve_live_day()
             return
+        if self.path.startswith("/api/recommendations"):
+            self._serve_recommendations()
+            return
         super().do_GET()
 
     def _serve_live_day(self) -> None:
@@ -96,6 +100,38 @@ class _Handler(SimpleHTTPRequestHandler):
             self.wfile.write(body)
         except (ConnectionError, OSError):
             pass  # browser navigated away / refreshed mid-response — ignore
+
+    def _serve_recommendations(self) -> None:
+        """Reschedule recommendations for a day (powers the Cowork skill too)."""
+        try:
+            date = None
+            if "?" in self.path:
+                from urllib.parse import parse_qs, urlparse
+
+                date = parse_qs(urlparse(self.path).query).get("date", [None])[0]
+            day = build_live_day(date)
+            data = day.get("data", {})
+            recs = recommend_meetings(
+                data.get("meetings", []),
+                date=data.get("date") or date,
+                score=day.get("pawse_score"),
+            )
+            body = json.dumps(
+                {"date": data.get("date"), "recommendations": recs}
+            ).encode("utf-8")
+            self.send_response(200)
+        except Exception as exc:
+            body = json.dumps({"error": str(exc)}).encode("utf-8")
+            self.send_response(500)
+
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except (ConnectionError, OSError):
+            pass
 
     def log_message(self, fmt, *args):  # noqa: N802 (http.server API)
         pass  # quiet access log; errors still print
