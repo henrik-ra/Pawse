@@ -10,12 +10,12 @@ Use this skill when I ask to "optimize my day", "rebalance my calendar",
 
 ## 1. Get the recommendations
 
-Fetch today's recommendations from Pawse:
+Fetch today's recommendations from Pawse (optionally pass a `date` as `YYYY-MM-DD`):
 
-- If the **Pawse** plugin is installed, call its `getRecommendations` action
-  (optionally pass a `date` in `YYYY-MM-DD`; default is today).
-- Otherwise, ask me to paste the JSON from
-  `https://<my-pawse-host>/api/recommendations` (or open it in Edge and read it).
+- **Pawse MCP** (Microsoft Scout / GitHub Copilot): call the `get_recommendations` tool.
+- **Cowork plugin**: call its `getRecommendations` action.
+- Otherwise: ask me to paste the JSON from `http://localhost:8000/api/recommendations`
+  (or open it in the browser and read it).
 
 Each recommendation has these fields:
 

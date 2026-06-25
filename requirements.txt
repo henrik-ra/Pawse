@@ -4,6 +4,9 @@ pandas>=2.0
 # Live Fitbit integration (OAuth2 + Web API calls)
 requests>=2.31
 
+# Local MCP server — exposes Pawse tools to Microsoft Scout / GitHub Copilot
+mcp>=1.0
+
 # Voice analysis (Teams meeting audio → biomarkers)
 librosa>=0.11           # audio feature extraction (pitch, jitter, shimmer, spectral, HNR, MFCC)
 soundfile>=0.12        # read/write audio files
