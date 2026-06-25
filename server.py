@@ -163,6 +163,9 @@ class _Handler(SimpleHTTPRequestHandler):
         if self.path.startswith("/api/recommendations"):
             self._serve_recommendations()
             return
+        if self.path.startswith("/api/queue"):
+            self._serve_queue()
+            return
         super().do_GET()
 
     def do_POST(self):  # noqa: N802 (http.server API)
@@ -252,7 +255,13 @@ class _Handler(SimpleHTTPRequestHandler):
             pass
 
     def _apply_action(self) -> None:
-        """Record a one-click action from the dashboard and recompute the day."""
+        """Record a one-click action from the dashboard and recompute the day.
+
+        A dashboard click is an **explicit user approval**, so besides the local
+        recompute we also enqueue a real task for the agent (Microsoft Scout) to
+        apply on the live calendar — and mark it ready straight away (even shared
+        moves), because the human just said yes by clicking.
+        """
         try:
             payload = self._read_json_body()
             date = payload.get("date") or _dt.date.today().isoformat()
@@ -262,18 +271,51 @@ class _Handler(SimpleHTTPRequestHandler):
                 "from": payload.get("from"),
                 "to": payload.get("to"),
                 "end": payload.get("end"),
+                "reason": payload.get("reason"),
             }
             _record_action(date, action)
+            task = self._enqueue_approved(date, action)
             day = build_live_day(date)
             self._write_json({
                 "ok": True,
                 "date": date,
                 "applied": action,
+                "task": task,
                 "pawse_score": day.get("pawse_score"),
                 "label": day.get("label"),
             })
         except Exception as exc:
             self._write_json({"ok": False, "error": str(exc)}, status=500)
+
+    @staticmethod
+    def _enqueue_approved(date: str, action: dict[str, Any]) -> dict[str, Any] | None:
+        """Enqueue a dashboard action for the agent and approve it (the click = OK)."""
+        try:
+            import pawse_queue
+
+            task = pawse_queue.enqueue(action, date=date, source="dashboard")
+            if task and task.get("status") == "needs_approval":
+                task = pawse_queue.approve(task["id"])
+            return task
+        except Exception:
+            return None  # never let a queue hiccup break the dashboard
+
+    def _serve_queue(self) -> None:
+        """Read-only view of the task queue (for the dashboard / pet status)."""
+        try:
+            from urllib.parse import parse_qs, urlparse
+
+            import pawse_queue
+
+            qs = parse_qs(urlparse(self.path).query)
+            date = qs.get("date", [None])[0]
+            status = qs.get("status", [None])[0]
+            self._write_json({
+                "summary": pawse_queue.summary(date),
+                "tasks": pawse_queue.list_tasks(status=status, date=date),
+            })
+        except Exception as exc:
+            self._write_json({"error": str(exc)}, status=500)
 
     def _reset_actions(self) -> None:
         try:

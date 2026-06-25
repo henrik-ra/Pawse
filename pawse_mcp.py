@@ -20,6 +20,15 @@ get_recommendations(date?)  → concrete reschedule suggestions for a day
 get_day(date?)              → the scored Pawse day (score, label, meetings, …)
 get_biomarkers(date?)       → per-meeting voice + face biomarkers (+ day rollup)
 get_meeting_biomarkers(...) → biomarkers for one meeting by title
+
+Task queue (Pawse recommends → Scout executes)
+----------------------------------------------
+sync_queue(date?)           → enqueue today's new recommendations as tasks
+claim_next_task(auto_only?) → claim the next executable task (heartbeat-safe)
+complete_task(id, note?)    → mark a task done after applying it
+fail_task(id, error)        → record a failed apply (re-queues by default)
+approve_task(id)/reject_task(id) → gate shared moves on explicit user OK
+list_tasks(status?, date?)  → inspect the queue
 """
 from __future__ import annotations
 
@@ -121,6 +130,112 @@ def reset_pending_actions() -> dict[str, Any]:
     import pawse_events
 
     pawse_events.reset()
+    return {"ok": True}
+
+
+# --- Task queue (Pawse recommends → Scout executes) -------------------------
+# The heartbeat loop is: sync_queue → claim_next_task → (apply on the calendar)
+# → complete_task. Self-only blockers are auto-applicable; shared moves wait in
+# needs_approval until approve_task is called.
+
+
+@mcp.tool()
+def sync_queue(date: str | None = None) -> dict[str, Any]:
+    """Refresh the task queue from today's recommendations and return its summary.
+
+    Computes the day's reschedule recommendations and **enqueues any new ones**
+    (idempotent — never duplicates). Self-only blockers (protect_focus /
+    protect_lunch) enter as ``ready`` + ``auto_apply=true``; moves that affect
+    other attendees enter as ``needs_approval``. Call this first on a heartbeat,
+    then drain the queue with ``claim_next_task``. ``date`` is YYYY-MM-DD
+    (defaults to today)."""
+    import pawse_queue
+    from scoring.meeting_optimizer import recommend
+
+    day = _scored_day(date)
+    data = day.get("data", {})
+    d = data.get("date") or date
+    recs = recommend(data.get("meetings", []), date=d, score=day.get("pawse_score"))
+    enqueued = [pawse_queue.enqueue(r, date=d, source="agent") for r in recs]
+    return {"date": d, "enqueued_or_existing": len(enqueued), "queue": pawse_queue.summary(d)}
+
+
+@mcp.tool()
+def list_tasks(status: str | None = None, date: str | None = None) -> dict[str, Any]:
+    """List queued reschedule tasks, optionally filtered by ``status``
+    (needs_approval / ready / claimed / done / failed / rejected) and/or ``date``.
+    Each task has: id, type, title, from, to, end, reason, auto_apply, affects,
+    priority, status, source."""
+    import pawse_queue
+
+    return {"tasks": pawse_queue.list_tasks(status=status, date=date)}
+
+
+@mcp.tool()
+def claim_next_task(auto_only: bool = True) -> dict[str, Any]:
+    """Claim the next executable task for the agent to apply, or report empty.
+
+    Returns one ``ready`` task and marks it ``claimed`` so no other run grabs it.
+    With ``auto_only=true`` (the safe heartbeat default) only **self-only**
+    blockers are handed out — an unattended run never touches a meeting with other
+    people. Set ``auto_only=false`` in an interactive session to also drain
+    approved shared moves. After applying the change on the real calendar, call
+    ``complete_task``; on error call ``fail_task``. Returns ``{task: null}`` when
+    nothing is claimable."""
+    import pawse_queue
+
+    task = pawse_queue.claim_next(auto_only=auto_only)
+    return {"task": task}
+
+
+@mcp.tool()
+def complete_task(task_id: str, note: str | None = None) -> dict[str, Any]:
+    """Mark a claimed task ``done`` after the calendar change was applied
+    successfully. ``note`` is an optional short result (e.g. the new event id)."""
+    import pawse_queue
+
+    task = pawse_queue.complete(task_id, result=note)
+    return {"ok": task is not None, "task": task}
+
+
+@mcp.tool()
+def fail_task(task_id: str, error: str, requeue: bool = True) -> dict[str, Any]:
+    """Record that applying a task failed. By default it is re-queued (back to
+    ``ready``) for a later retry; pass ``requeue=false`` to park it as ``failed``."""
+    import pawse_queue
+
+    task = pawse_queue.fail(task_id, error=error, requeue=requeue)
+    return {"ok": task is not None, "task": task}
+
+
+@mcp.tool()
+def approve_task(task_id: str) -> dict[str, Any]:
+    """Approve a proposed (``needs_approval``) task so it becomes claimable.
+
+    Call this only after the user explicitly said yes to moving a meeting that
+    involves other attendees. The task moves to ``ready`` and the next
+    ``claim_next_task`` (auto_only=false) can apply it."""
+    import pawse_queue
+
+    task = pawse_queue.approve(task_id)
+    return {"ok": task is not None, "task": task}
+
+
+@mcp.tool()
+def reject_task(task_id: str) -> dict[str, Any]:
+    """Decline a proposed task (the user said no). It leaves the active queue."""
+    import pawse_queue
+
+    task = pawse_queue.reject(task_id)
+    return {"ok": task is not None, "task": task}
+
+
+@mcp.tool()
+def reset_queue(date: str | None = None) -> dict[str, Any]:
+    """Clear the task queue (all days, or just ``date``). For demos/testing."""
+    import pawse_queue
+
+    pawse_queue.reset(date)
     return {"ok": True}
 
 
