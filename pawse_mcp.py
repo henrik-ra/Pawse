@@ -137,6 +137,13 @@ if __name__ == "__main__":
                 pass
         mcp.settings.host = "127.0.0.1"
         mcp.settings.port = port
+        # When reached through a public tunnel (e.g. for Copilot Studio), the Host
+        # header is the tunnel domain, not localhost. Disable DNS-rebinding protection
+        # so those requests aren't rejected with HTTP 421.
+        from mcp.server.transport_security import TransportSecuritySettings
+        mcp.settings.transport_security = TransportSecuritySettings(
+            enable_dns_rebinding_protection=False,
+        )
         mcp.run(transport="streamable-http")
     else:
         mcp.run()  # local stdio — Microsoft Scout, GitHub Copilot CLI

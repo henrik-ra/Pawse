@@ -1,0 +1,34 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Pawse MCP",
+    "description": "Pawse wellbeing + calendar tools (get_day, get_recommendations, get_pending_actions) exposed over MCP streamable HTTP for Copilot Studio.",
+    "version": "1.0.0"
+  },
+  "host": "extra-pierce-annotated-britney.trycloudflare.com",
+  "basePath": "/",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/mcp": {
+      "post": {
+        "summary": "Pawse MCP server",
+        "description": "Streamable MCP endpoint exposing Pawse's day score, reschedule recommendations and pending actions.",
+        "operationId": "InvokePawseMCP",
+        "x-ms-agentic-protocol": "mcp-streamable-1.0",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  }
+}
