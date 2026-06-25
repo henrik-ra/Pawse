@@ -47,6 +47,7 @@ from devices.outlook.graph_calendar import (
     get_reschedule_request_text,
     reschedule_meeting,
 )
+from scoring.meeting_scorer import recommend as scorer_recommend
 from scoring.pawse_score import score_day
 
 _ROOT = Path(__file__).resolve().parent
@@ -94,6 +95,9 @@ class _Handler(SimpleHTTPRequestHandler):
             return
         if self.path.startswith("/api/calendar/day"):
             self._serve_calendar_day()
+            return
+        if self.path.startswith("/api/recommendations"):
+            self._serve_recommendations()
             return
         super().do_GET()
 
@@ -294,6 +298,36 @@ class _Handler(SimpleHTTPRequestHandler):
             self._send_json({"error": str(e), "code": "auth_required"}, 401)
         except GraphAPIError as e:
             self._send_json({"error": str(e), "code": e.error_code}, e.status_code or 502)
+        except Exception as exc:
+            self._send_json({"error": str(exc)}, 500)
+
+    def _serve_recommendations(self) -> None:
+        """GET /api/recommendations?date=YYYY-MM-DD — scored reschedule suggestions."""
+        try:
+            date = None
+            if "?" in self.path:
+                date = parse_qs(urlparse(self.path).query).get("date", [None])[0]
+
+            # Build the day data (same as live-day) for scoring context
+            day = build_live_day(date)
+            data = day.get("data", {})
+            wearable = data.get("wearable", {}) or {}
+            meetings = data.get("meetings", [])
+
+            # Run the meeting scorer
+            recs = scorer_recommend(
+                meetings,
+                date=data.get("date") or date,
+                wearable=wearable if wearable.get("mode") == "live" else None,
+                hrv=wearable.get("hrv"),
+            )
+
+            self._send_json({
+                "date": data.get("date"),
+                "pawse_score": day.get("pawse_score"),
+                "recommendations": recs,
+                "count": len(recs),
+            })
         except Exception as exc:
             self._send_json({"error": str(exc)}, 500)
 

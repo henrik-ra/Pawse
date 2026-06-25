@@ -93,18 +93,14 @@ def _recommendations(reasons: list[str], data: dict[str, Any] | None = None) -> 
         recs.append("Turn one meeting into an async update.")
     if "back-to-back" in joined:
         recs.append("Add 10-minute buffers between meetings.")
-        # Smart Meeting Timing: suggest rescheduling when back-to-backs are detected
         if data and _has_movable_meetings(data):
             recs.append("Consider finding a time with more availability for all participants.")
     if "movement" in joined:
         recs.append("Take one walking 1:1.")
     if "lunch" in joined:
         recs.append("Protect a real lunch break.")
-        if data and _has_movable_meetings(data):
-            recs.append("Your calendar has limited prep or follow-up space around some meetings.")
-    # Smart Meeting Timing: suggest moves for heavy meeting days
+    # Smart Meeting Timing: use the scoring engine for targeted suggestions
     if data and _should_suggest_meeting_move(data):
-        recs.append("This meeting may be more effective in a lower-pressure slot.")
         recs.append("Moving a meeting could create better execution space.")
     return recs or ["Your day looks balanced — keep it up!"]
 
@@ -112,7 +108,6 @@ def _recommendations(reasons: list[str], data: dict[str, Any] | None = None) -> 
 def _has_movable_meetings(data: dict[str, Any]) -> bool:
     """Check if there are meetings that could potentially be moved."""
     meetings = data.get("meetings", [])
-    # At least one meeting that's back-to-back or in a dense cluster
     return any(m.get("back_to_back") for m in meetings)
 
 
