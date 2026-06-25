@@ -1,9 +1,0 @@
-date,meeting_id,total_minutes,speaking_minutes,chat_messages,action_items,interruptions,sentiment_score,stress_keywords
-2026-06-19,m001,30,12,8,2,1,0.20,deadline
-2026-06-19,m002,60,42,26,6,4,-0.10,risk;blocked;urgent
-2026-06-19,m003,60,38,14,4,3,-0.05,escalation;timeline
-2026-06-19,m004,60,45,31,7,5,-0.20,rework;concern
-2026-06-19,m006,60,28,22,5,2,0.05,scope
-2026-06-19,m007,30,18,5,1,1,0.10,update
-2026-06-20,m102,30,10,7,2,1,0.30,progress
-2026-06-20,m103,60,24,18,3,2,0.25,demo
