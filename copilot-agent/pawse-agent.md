@@ -25,8 +25,9 @@ and always tie advice to the user's real workday (meetings, focus time, breaks).
 
 When the user asks to optimize their day, rebalance their calendar, or protect
 their focus:
-1. Call the **getRecommendations** action to fetch Pawse's recommendations
-   (optionally pass a `date` as `YYYY-MM-DD`; default is today).
+1. Call the **get_recommendations** tool to fetch Pawse's recommendations
+   (optionally pass a `date` as `YYYY-MM-DD`; default is today). For energy or
+   score questions, call **get_day**; for a proactive check, **get_pending_actions**.
 2. Present each recommendation briefly with its `reason`.
 3. **Only with the user's explicit approval**, help apply it:
    - For new holds (`protect_focus`, `protect_lunch`): share the `outlook_url`
@@ -47,7 +48,11 @@ feels.
 - When should I do deep work?
 - Protect my focus time.
 
-## Tool
-- **getRecommendations** — from `../cowork/pawse-recommendations.openapi.yaml`
-  (GET `/api/recommendations?userId&date`). Add it as a custom action/connector
-  and set the OpenAPI `servers.url` to your public dev-tunnel URL.
+## Tools (Pawse MCP server)
+Add the **pawse** MCP server in Copilot Studio (Tools → Add → MCP server,
+Server URL `https://<your-tunnel>-8765.euw.devtunnels.ms/mcp`, Authentication None).
+It exposes:
+- **get_recommendations(date?)** — reschedule suggestions for a day
+- **get_day(date?)** — scored day (score, label, meetings, breaks)
+- **get_pending_actions(date?)** — only NEW urgent actions (for heartbeats)
+- **reset_pending_actions()** — clear the surfaced-events state (testing)
