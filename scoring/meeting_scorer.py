@@ -36,7 +36,7 @@ _DAY_END = 18 * 60           # 18:00
 _LUNCH_WINDOW = (11 * 60 + 30, 14 * 60 + 30)  # 11:30–14:30
 _LUNCH_NEEDED = 30
 _B2B_GAP = 5                 # gap ≤ 5 min = back-to-back
-_FOCUS_MIN = 90              # free block worth protecting
+_FOCUS_MIN = 60              # free block worth protecting
 _HR_SPIKE_DELTA = 25         # bpm above resting = spike
 _HR_ELEVATED_DELTA = 15      # bpm above resting = elevated avg
 _HR_RECOVERY_DELTA = 10      # bpm above resting = not recovered
@@ -240,7 +240,7 @@ def score_pressure(
         if is_organizer:
             score += 10
             signals.append("no_prep_organizer")
-        elif attendee_count <= 6 and meeting.get("response", "") in ("accepted", "organizer"):
+        elif attendee_count <= 3 and meeting.get("response", "") in ("accepted", "organizer"):
             score += 5
             signals.append("no_prep_small_collab")
 
@@ -410,6 +410,8 @@ def recommend(
     date: str | None = None,
     wearable: dict[str, Any] | None = None,
     hrv: float | None = None,
+    blockers: list[dict[str, Any]] | None = None,
+    week_avg_hr: float | None = None,
 ) -> list[dict[str, Any]]:
     """Score all meetings and return prioritised reschedule recommendations.
 
@@ -418,6 +420,13 @@ def recommend(
         date: YYYY-MM-DD for deeplinks.
         wearable: Wearable data dict with resting_hr, hr_samples, etc.
         hrv: Daily HRV value (if available). Low HRV = lower thresholds.
+        blockers: User-created calendar blockers (focus time, personal blocks).
+            These are treated as soft constraints: they occupy slots in normal
+            free-time calculation, but can be displaced if no other slot exists
+            for rescheduling a high-pressure meeting.
+        week_avg_hr: Average resting HR across the current week. Used to
+            determine whether this is a high-stress week (higher avg HR than
+            usual), which makes focus time recommendations more aggressive.
 
     Returns:
         List of structured recommendations (max _MAX_RECS).
@@ -438,9 +447,18 @@ def recommend(
         m_score, m_signals = score_movability(m)
         scored.append((m, p_score, m_score, p_signals, m_signals))
 
-    # Find free slots for suggesting destinations
-    slots = _free_slots(ordered)
-    longest = _longest_slot(slots)
+    # Compute free slots: first without blockers (hard slots), then with
+    # blockers included (soft slots). If no destination exists in hard slots,
+    # fall back to soft slots (i.e. displace a blocker).
+    hard_slots = _free_slots(ordered)
+    if blockers:
+        all_events = ordered + _ordered(blockers)
+        soft_slots = _free_slots(all_events)
+    else:
+        soft_slots = hard_slots
+
+    longest_hard = _longest_slot(hard_slots)
+    longest_soft = _longest_slot(soft_slots)
 
     recs: list[dict[str, Any]] = []
 
@@ -456,28 +474,34 @@ def recommend(
         m_end = _to_min(m["end"])
         m_dur = m_end - m_start
 
-        # Find a suitable destination slot
-        dest = None
-        for slot_start, slot_end in slots:
-            if (slot_end - slot_start) >= m_dur and slot_start != m_start:
-                dest = (slot_start, slot_start + m_dur)
-                break
+        # Try soft slots first (respect blockers), fall back to hard slots
+        # (displace blockers) if nothing fits
+        dest = _find_destination(soft_slots, m_dur, m_start)
+        displaced_blocker = False
+        if not dest and blockers:
+            dest = _find_destination(hard_slots, m_dur, m_start)
+            displaced_blocker = bool(dest)
 
         if not dest:
             continue
 
         rec_type = "move_after_hours" if "after_hours" in p_signals else "reschedule"
+        reason = _build_reason(p_signals)
+        if displaced_blocker:
+            reason += " (A blocker may need to shift to make room.)"
+
         recs.append({
             "type": rec_type,
             "title": m.get("title", "Meeting"),
             "from": m["start"],
             "to": _to_hhmm(dest[0]),
             "end": _to_hhmm(dest[1]),
-            "reason": _build_reason(p_signals),
+            "reason": reason,
             "pressure_score": p_score,
             "movability_score": m_score,
             "priority": p_score * m_score,
             "is_organizer": m.get("is_organizer", False),
+            "displaced_blocker": displaced_blocker,
             "outlook_url": _calendar_url(date),
             "auto_apply": False,  # affects others → needs user approval
         })
@@ -505,8 +529,25 @@ def recommend(
             "auto_apply": True,  # self-only
         })
 
-    # --- Protect peak focus (self-only, wearable-informed) ---
-    if longest and (longest[1] - longest[0]) >= _FOCUS_MIN:
+    # --- Protect peak focus (self-only, week-stress-aware) ---
+    # Use the longest slot that respects existing blockers
+    focus_slot = longest_soft if longest_soft else longest_hard
+    if focus_slot and (focus_slot[1] - focus_slot[0]) >= _FOCUS_MIN:
+        # Determine if this is a high-stress week from HR trends
+        is_stressed_week = False
+        if wearable and week_avg_hr is not None:
+            resting_hr = wearable.get("resting_hr", 0)
+            # If this week's avg resting HR is ≥5 bpm above today's resting,
+            # it's a demanding week — focus time matters more
+            if resting_hr and week_avg_hr >= resting_hr + 5:
+                is_stressed_week = True
+
+        # On stressed weeks, also lower the focus threshold and cap duration shorter
+        if is_stressed_week:
+            focus_duration = min(90, focus_slot[1] - focus_slot[0])
+        else:
+            focus_duration = min(120, focus_slot[1] - focus_slot[0])
+
         # Check if this block is in the user's calmest hours
         is_peak = False
         if wearable:
@@ -514,15 +555,19 @@ def recommend(
             hr_samples = wearable.get("hr_samples", [])
             if resting_hr and hr_samples:
                 calmest = _find_calmest_hours(hr_samples, resting_hr)
-                block_hour = longest[0] // 60
+                block_hour = focus_slot[0] // 60
                 is_peak = block_hour in calmest[:3]
 
-        f_start, f_end = longest[0], min(longest[0] + 120, longest[1])
-        reason = (
-            "You have a clear high-energy block — protect it for deep work."
-            if is_peak else
-            "You have a clear block — protect it for deep work."
-        )
+        f_start = focus_slot[0]
+        f_end = f_start + focus_duration
+
+        if is_stressed_week:
+            reason = "Demanding week — protecting focus time is especially important."
+        elif is_peak:
+            reason = "You have a clear high-energy block — protect it for deep work."
+        else:
+            reason = "You have a clear block — protect it for deep work."
+
         recs.append({
             "type": "protect_peak_focus" if is_peak else "protect_focus",
             "title": "Focus time",
@@ -539,6 +584,16 @@ def recommend(
         })
 
     return recs[:_MAX_RECS]
+
+
+def _find_destination(
+    slots: list[tuple[int, int]], duration: int, current_start: int
+) -> tuple[int, int] | None:
+    """Find a free slot big enough for the meeting, not at its current position."""
+    for slot_start, slot_end in slots:
+        if (slot_end - slot_start) >= duration and slot_start != current_start:
+            return (slot_start, slot_start + duration)
+    return None
 
 
 # --- CLI test -----------------------------------------------------------------
