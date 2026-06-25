@@ -134,6 +134,8 @@ def get_biomarkers(date: str | None = None) -> dict[str, Any]:
     """
     from teams_sessions import sessions_for, label_for
 
+    import datetime as _dt
+    date = date or _dt.date.today().isoformat()
     res = sessions_for(date)
     shown = res.get("sessions", [])
 

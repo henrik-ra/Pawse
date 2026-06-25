@@ -147,5 +147,124 @@
     },
     "source": "pawse-teams-app",
     "label": "Low strain"
+  },
+  {
+    "id": "tm-2026-06-25-0900",
+    "date": "2026-06-25",
+    "title": "Daily standup",
+    "start": "09:00",
+    "end": "09:15",
+    "duration_min": 15,
+    "distress_score": 48,
+    "label": "Medium strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 46,
+      "emotion": 40,
+      "tension": 55,
+      "voice": 42
+    }
+  },
+  {
+    "id": "tm-2026-06-25-0930",
+    "date": "2026-06-25",
+    "title": "Project sync",
+    "start": "09:30",
+    "end": "10:30",
+    "duration_min": 60,
+    "distress_score": 58,
+    "label": "Medium strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 52,
+      "emotion": 49,
+      "tension": 66,
+      "voice": 55
+    }
+  },
+  {
+    "id": "tm-2026-06-25-1030",
+    "date": "2026-06-25",
+    "title": "Design review",
+    "start": "10:30",
+    "end": "11:30",
+    "duration_min": 60,
+    "distress_score": 66,
+    "label": "Medium strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 60,
+      "emotion": 58,
+      "tension": 74,
+      "voice": 62
+    }
+  },
+  {
+    "id": "tm-2026-06-25-1300",
+    "date": "2026-06-25",
+    "title": "Customer call",
+    "start": "13:00",
+    "end": "14:00",
+    "duration_min": 60,
+    "distress_score": 78,
+    "label": "High strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 68,
+      "emotion": 72,
+      "tension": 84,
+      "voice": 74
+    }
+  },
+  {
+    "id": "tm-2026-06-25-1400",
+    "date": "2026-06-25",
+    "title": "Sprint planning",
+    "start": "14:00",
+    "end": "15:30",
+    "duration_min": 90,
+    "distress_score": 74,
+    "label": "High strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 72,
+      "emotion": 60,
+      "tension": 80,
+      "voice": 66
+    }
+  },
+  {
+    "id": "tm-2026-06-25-1600",
+    "date": "2026-06-25",
+    "title": "Stakeholder update",
+    "start": "16:00",
+    "end": "17:00",
+    "duration_min": 60,
+    "distress_score": 86,
+    "label": "High strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 80,
+      "emotion": 82,
+      "tension": 90,
+      "voice": 78
+    }
+  },
+  {
+    "id": "tm-2026-06-25-1900",
+    "date": "2026-06-25",
+    "title": "Late sync (US team)",
+    "start": "19:00",
+    "end": "19:45",
+    "duration_min": 45,
+    "distress_score": 80,
+    "label": "High strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 82,
+      "emotion": 70,
+      "tension": 84,
+      "voice": 72
+    }
   }
 ]
