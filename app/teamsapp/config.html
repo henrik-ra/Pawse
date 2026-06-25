@@ -36,10 +36,11 @@
   <script>
     microsoftTeams.app.initialize().then(function () {
       microsoftTeams.pages.config.registerOnSaveHandler(function (saveEvent) {
+        var panel = window.location.origin + "/teamsapp/meetingpanel.html?v=" + Date.now();
         microsoftTeams.pages.config.setConfig({
           entityId: "pawse-capture",
-          contentUrl: window.location.origin + "/teamsapp/meetingpanel.html",
-          websiteUrl: window.location.origin + "/teamsapp/meetingpanel.html",
+          contentUrl: panel,
+          websiteUrl: panel,
           suggestedDisplayName: "Pawse"
         }).then(function () { saveEvent.notifySuccess(); });
       });

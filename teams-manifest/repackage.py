@@ -32,12 +32,13 @@ def main() -> None:
 
     m = json.loads(MANIFEST.read_text(encoding="utf-8"))
     m["version"] = bump(m.get("version", "1.0.0"))
+    cb = m["version"].replace(".", "")  # cache-buster so Teams reloads iframes
 
     for tab in m.get("staticTabs", []):
-        tab["contentUrl"] = f"{base}/teamsapp/index.html"
-        tab["websiteUrl"] = f"{base}/teamsapp/index.html"
+        tab["contentUrl"] = f"{base}/teamsapp/index.html?v={cb}"
+        tab["websiteUrl"] = f"{base}/teamsapp/index.html?v={cb}"
     for tab in m.get("configurableTabs", []):
-        tab["configurationUrl"] = f"{base}/teamsapp/config.html"
+        tab["configurationUrl"] = f"{base}/teamsapp/config.html?v={cb}"
 
     keep = [d for d in m.get("validDomains", []) if "trycloudflare.com" not in d and "devtunnels.ms" not in d]
     m["validDomains"] = [host] + keep
