@@ -7,15 +7,32 @@
   <script src="https://res.cdn.office.net/teams-js/2.24.0/js/MicrosoftTeams.min.js"
           crossorigin="anonymous"></script>
   <style>
-    body { font-family: "Segoe UI", system-ui, sans-serif; padding: 24px; color: #1f2421; }
-    h2 { margin: 0 0 8px; }
-    p { color: #5c6360; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      display: flex; align-items: center; justify-content: center;
+      background: transparent; color: #e9eaee;
+    }
+    .card {
+      max-width: 460px; text-align: center; padding: 28px 24px;
+      background: #2b2b30; border: 1px solid #3d3d44; border-radius: 14px;
+    }
+    .panda { font-size: 40px; line-height: 1; margin-bottom: 6px; }
+    h2 { margin: 6px 0 8px; font-size: 1.15rem; color: #fff; }
+    p { color: #c7c9d1; font-size: .9rem; line-height: 1.45; margin: 0 0 6px; }
+    .hint { color: #9aa0a4; font-size: .78rem; margin-top: 14px; }
+    .ok { color: #6cd07f; font-weight: 600; }
   </style>
 </head>
 <body>
-  <h2>🐼 Add Pawse to this meeting</h2>
-  <p>Pawse measures your wellbeing biomarkers on-device during the call and lets you
-     save them to your dashboard afterwards.</p>
+  <div class="card">
+    <div class="panda">🐼</div>
+    <h2>Pawse — wellbeing in this call</h2>
+    <p>Pawse measures your fatigue, facial tension, emotion and vocal stress
+       <strong>on your own device</strong> during the call.</p>
+    <p>It runs automatically and saves to your dashboard when you leave.</p>
+    <p class="hint" id="hint">Click <span class="ok">Save</span> to add Pawse to this meeting.</p>
+  </div>
   <script>
     microsoftTeams.app.initialize().then(function () {
       microsoftTeams.pages.config.registerOnSaveHandler(function (saveEvent) {
@@ -23,10 +40,12 @@
           entityId: "pawse-capture",
           contentUrl: window.location.origin + "/teamsapp/meetingpanel.html",
           websiteUrl: window.location.origin + "/teamsapp/meetingpanel.html",
-          suggestedDisplayName: "Pawse",
+          suggestedDisplayName: "Pawse"
         }).then(function () { saveEvent.notifySuccess(); });
       });
       microsoftTeams.pages.config.setValidityState(true);
+    }).catch(function (e) {
+      document.getElementById("hint").textContent = "Init error: " + e;
     });
   </script>
 </body>
