@@ -103,3 +103,28 @@ def list_history(user_id: str, days: int = 30) -> list[dict[str, Any]]:
         partition_key=user_id,
     )
     return list(items)
+
+
+def list_recent_days(user_id: str, days: int = 14) -> list[dict[str, Any]]:
+    """Return the full scored objects for the most recent days (newest first).
+
+    Used by the Teams bot / AI coach to answer longitudinal questions (trends,
+    weekly averages, voice-signal changes). Best-effort: empty when unconfigured.
+    """
+    container = _connect()
+    if container is None:
+        return []
+
+    query = (
+        "SELECT TOP @days c.scored FROM c "
+        "WHERE c.userId = @userId ORDER BY c.date DESC"
+    )
+    items = container.query_items(
+        query=query,
+        parameters=[
+            {"name": "@days", "value": days},
+            {"name": "@userId", "value": user_id},
+        ],
+        partition_key=user_id,
+    )
+    return [item.get("scored", item) for item in items]
