@@ -240,7 +240,7 @@ def main() -> None:
 
     tokens = _exchange_code(_CallbackHandler.auth_code, client_id, client_secret)
     save_tokens(tokens)
-    print("\n✓ Success. Tokens saved to devices/outlook/ms_tokens.json.")
+    print("\nSuccess. Tokens saved to devices/outlook/ms_tokens.json.")
     print("Run `python server.py` and the calendar features will work automatically.")
 
 

@@ -48,7 +48,10 @@ _MOVABILITY_THRESHOLD = 20   # minimum to suggest a move
 # --- Utility ------------------------------------------------------------------
 
 def _to_min(hhmm: str) -> int:
-    """'13:45' -> 825 minutes since midnight."""
+    """'13:45' -> 825 minutes since midnight. Also handles ISO datetimes."""
+    # Handle ISO datetime like '2026-06-25T13:45:00'
+    if "T" in str(hhmm):
+        hhmm = str(hhmm).split("T")[1][:5]
     hours, _, minutes = hhmm.partition(":")
     return int(hours) * 60 + int(minutes)
 
