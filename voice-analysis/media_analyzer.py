@@ -9,6 +9,8 @@ Everything degrades gracefully (see the analyzer modules), so it never crashes:
   - ``.wav``                      → analysed directly with numpy
   - other audio / video           → audio extracted via ffmpeg / imageio-ffmpeg
   - no audio backend              → recorded as "unavailable" (no crash)
+Voice analysis uses librosa when installed (rich biomarkers: F0/jitter/shimmer,
+spectral shape, HNR, MFCC), else falls back to a pure-numpy feature set.
 
 Usage:
     python voice-analysis/media_analyzer.py                 # scan default folders
@@ -238,6 +240,7 @@ def aggregate_signals(results: list[dict[str, Any]]) -> dict[str, dict[str, Any]
                 "segments": sum(v.get("analyzed_segments", 1) for v in vl),
                 "files": len(vl),
                 "features": vl[-1].get("features", {}),
+                "biomarkers": vl[-1].get("biomarkers", {}),
                 "notes": f"From {len(vl)} recording(s) · on-device {src} analysis",
             }
         fl = bucket["face"]

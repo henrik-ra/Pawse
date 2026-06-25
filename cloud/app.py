@@ -25,12 +25,14 @@ from typing import Any
 
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 
 from scoring.pawse_score import score_day
+from scoring.meeting_optimizer import recommend as recommend_meetings
 
 from . import pawse_store
 
@@ -251,6 +253,47 @@ def ingest_media(
 @app.get("/api/history")
 def history(userId: str = "me", days: int = 30) -> dict[str, Any]:
     return {"userId": userId, "days": days, "history": pawse_store.list_history(userId, days)}
+
+
+@app.get("/api/recommendations")
+def recommendations(userId: str = "me", date: str | None = None) -> dict[str, Any]:
+    """Concrete, actionable reschedule recommendations for a day.
+
+    Consumed by the dashboard / Teams bot (1-click Outlook deeplink) and by
+    Microsoft 365 Copilot Cowork, which executes the move on the user's behalf
+    (with the user's approval) using the structured fields.
+    """
+    date = date or _today()
+    stored = pawse_store.get_day(userId, date)
+    if stored is None:
+        stored = _score_and_store(_demo_day(userId, date), userId, date)
+    data = stored.get("data", {})
+    recs = recommend_meetings(
+        data.get("meetings", []), date=date, score=stored.get("pawse_score")
+    )
+    return {"userId": userId, "date": date, "recommendations": recs}
+
+
+@app.post("/api/messages")
+async def messages(request: Request):
+    """Microsoft Teams bot endpoint (Azure Bot Service forwards activities here).
+
+    Inactive until the bot is configured (``MicrosoftAppId`` set), so the rest of
+    the API is unaffected before the Azure Bot resource exists.
+    """
+    try:
+        from . import pawse_bot
+    except Exception as exc:  # botbuilder not installed
+        raise HTTPException(status_code=503, detail=f"bot unavailable: {exc}")
+    if not pawse_bot.is_configured():
+        raise HTTPException(status_code=503, detail="Teams bot not configured")
+
+    body = await request.json()
+    auth_header = request.headers.get("Authorization", "")
+    invoke_response = await pawse_bot.process(auth_header, body)
+    if invoke_response is not None:
+        return JSONResponse(status_code=invoke_response.status, content=invoke_response.body)
+    return Response(status_code=201)
 
 
 # Serve the dashboard (app/) from the same origin as the API, so the relative

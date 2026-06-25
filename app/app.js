@@ -108,6 +108,116 @@ function renderHero(score, label, data, w) {
   if (breatheBtn) breatheBtn.classList.toggle("urgent", score >= 70);
 }
 
+// ---- Rebalance your day (actionable reschedule suggestions) ----------------
+const REBALANCE_ICON = {
+  protect_focus: "🛡️", protect_lunch: "🥗", reschedule: "📅",
+  move_after_hours: "🌙", add_buffer: "⏳",
+};
+const REBALANCE_VERB = {
+  protect_focus: "Protect focus", protect_lunch: "Protect lunch",
+  reschedule: "Move meeting", move_after_hours: "Move into day", add_buffer: "Add buffer",
+};
+const REBALANCE_DONE = {
+  protect_focus: "focus time protected", protect_lunch: "lunch break protected",
+  reschedule: "meeting moved", move_after_hours: "moved into your day \u2014 evening protected",
+  add_buffer: "buffer added",
+};
+
+async function renderRebalance(date) {
+  const card = document.getElementById("rebalanceCard");
+  const list = document.getElementById("rebalanceList");
+  if (!card || !list) return;
+  try {
+    const res = await fetch(`/api/recommendations?date=${encodeURIComponent(date)}`, { cache: "no-store" });
+    if (!res.ok) throw new Error("api");
+    const recs = (await res.json()).recommendations || [];
+    if (!recs.length) { card.hidden = true; return; }
+
+    list.textContent = "";
+    for (const r of recs) {
+      const li = document.createElement("li");
+      li.className = "rebalance-item";
+
+      const ico = document.createElement("span");
+      ico.className = "rb-ico";
+      ico.textContent = REBALANCE_ICON[r.type] || "•";
+
+      const text = document.createElement("span");
+      text.className = "rb-text";
+      const title = document.createElement("span");
+      title.className = "rb-title";
+      title.textContent = r.title || "Adjust";
+      const when = document.createElement("span");
+      when.className = "rb-when";
+      when.textContent = r.from ? `${r.from} \u2192 ${r.to}` : `${r.to}\u2013${r.end}`;
+      title.appendChild(when);
+      const reason = document.createElement("span");
+      reason.className = "rb-reason";
+      reason.textContent = r.reason || "";
+      text.append(title, reason);
+
+      const action = document.createElement("button");
+      action.type = "button";
+      action.className = "rb-action";
+      action.textContent = `${REBALANCE_VERB[r.type] || "Adjust"} \u2192`;
+      action.addEventListener("click", () => applyAction(r, date, action, li));
+
+      li.append(ico, text, action);
+      list.appendChild(li);
+    }
+    document.getElementById("rebalanceSub").textContent =
+      `${recs.length} suggestion${recs.length > 1 ? "s" : ""}`;
+    card.hidden = false;
+  } catch (_) {
+    card.hidden = true;
+  }
+}
+
+// Apply a reschedule action: tell the local server to move it, then re-fetch so
+// the score, tiles and meetings all reflect the change. This is the visible
+// "detect \u2192 propose \u2192 act" loop \u2014 one click really rebalances the day.
+async function applyAction(r, date, button, li) {
+  button.disabled = true;
+  const original = button.textContent;
+  button.textContent = "Working\u2026";
+  li.classList.add("applying");
+  try {
+    const resp = await fetch("/api/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date, type: r.type, title: r.title,
+        from: r.from, to: r.to, end: r.end,
+      }),
+    });
+    if (!resp.ok) throw new Error("apply");
+    button.textContent = "\u2713 Done";
+    li.classList.add("done");
+    showToast(`\u2713 ${r.title} \u2014 ${REBALANCE_DONE[r.type] || "updated"}`);
+    setTimeout(() => fetchDay(date), 750);
+  } catch (_) {
+    button.disabled = false;
+    button.textContent = original;
+    li.classList.remove("applying");
+    showToast("Couldn't apply \u2014 is the local server running?");
+  }
+}
+
+let _toastTimer = null;
+function showToast(msg) {
+  let el = document.getElementById("pawseToast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "pawseToast";
+    el.className = "toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
+}
+
 // ---- Breathing exercise -----------------------------------------------------
 let _breathTimer = null;
 
@@ -499,20 +609,6 @@ async function renderTrend(days = 14) {
   });
 }
 
-function renderVoice(voice) {
-  const v = voice || {};
-  const idx = typeof v.avg_stress_index === "number" ? v.avg_stress_index
-            : typeof v.stressIndex === "number" ? v.stressIndex
-            : typeof v.arousal === "number" ? v.arousal : null;
-  document.getElementById("voiceFill").style.width = idx === null ? "0%" : `${Math.round(idx * 100)}%`;
-  document.getElementById("voiceVal").textContent = idx === null ? "—" : `${Math.round(idx * 100)}%`;
-  const src = (v.source === "wav-numpy" || v.source === "librosa")
-    ? "on-device audio analysis" : (v.source || "");
-  document.getElementById("voiceNote").textContent = v.notes ||
-    (idx === null ? "No voice analysis for this day."
-                  : `Voice stress ${Math.round(idx * 100)}%${src ? ` · ${src}` : ""}${v.files ? ` · ${v.files} recording(s)` : ""}`);
-}
-
 function capWord(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
 
 function renderFace(face) {
@@ -542,6 +638,15 @@ function renderFace(face) {
         root.appendChild(chip);
       });
   }
+}
+
+function renderVoice(voice) {
+  const v = voice || {};
+  const idx = typeof v.avg_stress_index === "number" ? v.avg_stress_index : null;
+  document.getElementById("voiceFill").style.width = idx === null ? "0%" : `${Math.round(idx * 100)}%`;
+  document.getElementById("voiceVal").textContent = idx === null ? "—" : `${Math.round(idx * 100)}%`;
+  document.getElementById("voiceNote").textContent = v.notes ||
+    (idx === null ? "No voice analysis for this day." : "");
 }
 
 function fillList(id, items) {
@@ -802,6 +907,7 @@ async function fetchDay(date, { silent = false } = {}) {
       const result = await res.json();
       if (!result.error) {
         render(result);
+        renderRebalance(date);
         recordHistory(date, result.pawse_score ?? result.score, result.label);
         renderTrend();
         return;

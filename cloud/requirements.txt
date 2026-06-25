@@ -3,3 +3,8 @@ uvicorn[standard]>=0.30
 azure-cosmos>=4.7
 azure-identity>=1.17
 azure-monitor-opentelemetry>=1.6
+
+# --- Teams bot + AI coach (optional; endpoint stays dormant until configured) ---
+botbuilder-core>=4.16
+botbuilder-schema>=4.16
+openai>=1.40

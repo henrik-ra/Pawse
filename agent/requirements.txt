@@ -12,7 +12,9 @@ imageio-ffmpeg>=0.4
 onnxruntime>=1.17
 pillow>=10.0
 
-# --- Optional: richer voice features / deep models ----------------------------
-# librosa>=0.10
+# --- Richer voice biomarkers: F0/jitter/shimmer, spectral shape, HNR, MFCC -----
+# librosa auto-detected by the voice analyzer; falls back to the pure-numpy tier
+# if absent. Pulls scipy / numba / scikit-learn (~150 MB). Py 3.14 wheels exist.
+librosa>=0.11
 # transformers>=4.40
 # torch>=2.2
