@@ -70,6 +70,7 @@ function render(result) {
   fillList("reasons", result.reasons || []);
   fillList("recommendations", result.recommendations || []);
   renderVoice(data.voice);
+  renderFace(data.face);
   showUpdated();
 }
 
@@ -105,6 +106,116 @@ function renderHero(score, label, data, w) {
 
   const breatheBtn = document.getElementById("breatheBtn");
   if (breatheBtn) breatheBtn.classList.toggle("urgent", score >= 70);
+}
+
+// ---- Rebalance your day (actionable reschedule suggestions) ----------------
+const REBALANCE_ICON = {
+  protect_focus: "🛡️", protect_lunch: "🥗", reschedule: "📅",
+  move_after_hours: "🌙", add_buffer: "⏳",
+};
+const REBALANCE_VERB = {
+  protect_focus: "Protect focus", protect_lunch: "Protect lunch",
+  reschedule: "Move meeting", move_after_hours: "Move into day", add_buffer: "Add buffer",
+};
+const REBALANCE_DONE = {
+  protect_focus: "focus time protected", protect_lunch: "lunch break protected",
+  reschedule: "meeting moved", move_after_hours: "moved into your day \u2014 evening protected",
+  add_buffer: "buffer added",
+};
+
+async function renderRebalance(date) {
+  const card = document.getElementById("rebalanceCard");
+  const list = document.getElementById("rebalanceList");
+  if (!card || !list) return;
+  try {
+    const res = await fetch(`/api/recommendations?date=${encodeURIComponent(date)}`, { cache: "no-store" });
+    if (!res.ok) throw new Error("api");
+    const recs = (await res.json()).recommendations || [];
+    if (!recs.length) { card.hidden = true; return; }
+
+    list.textContent = "";
+    for (const r of recs) {
+      const li = document.createElement("li");
+      li.className = "rebalance-item";
+
+      const ico = document.createElement("span");
+      ico.className = "rb-ico";
+      ico.textContent = REBALANCE_ICON[r.type] || "•";
+
+      const text = document.createElement("span");
+      text.className = "rb-text";
+      const title = document.createElement("span");
+      title.className = "rb-title";
+      title.textContent = r.title || "Adjust";
+      const when = document.createElement("span");
+      when.className = "rb-when";
+      when.textContent = r.from ? `${r.from} \u2192 ${r.to}` : `${r.to}\u2013${r.end}`;
+      title.appendChild(when);
+      const reason = document.createElement("span");
+      reason.className = "rb-reason";
+      reason.textContent = r.reason || "";
+      text.append(title, reason);
+
+      const action = document.createElement("button");
+      action.type = "button";
+      action.className = "rb-action";
+      action.textContent = `${REBALANCE_VERB[r.type] || "Adjust"} \u2192`;
+      action.addEventListener("click", () => applyAction(r, date, action, li));
+
+      li.append(ico, text, action);
+      list.appendChild(li);
+    }
+    document.getElementById("rebalanceSub").textContent =
+      `${recs.length} suggestion${recs.length > 1 ? "s" : ""}`;
+    card.hidden = false;
+  } catch (_) {
+    card.hidden = true;
+  }
+}
+
+// Apply a reschedule action: tell the local server to move it, then re-fetch so
+// the score, tiles and meetings all reflect the change. This is the visible
+// "detect \u2192 propose \u2192 act" loop \u2014 one click really rebalances the day.
+async function applyAction(r, date, button, li) {
+  button.disabled = true;
+  const original = button.textContent;
+  button.textContent = "Working\u2026";
+  li.classList.add("applying");
+  try {
+    const resp = await fetch("/api/apply", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        date, type: r.type, title: r.title,
+        from: r.from, to: r.to, end: r.end,
+      }),
+    });
+    if (!resp.ok) throw new Error("apply");
+    button.textContent = "\u2713 Done";
+    li.classList.add("done");
+    showToast(`\u2713 ${r.title} \u2014 ${REBALANCE_DONE[r.type] || "updated"}`);
+    setTimeout(() => fetchDay(date), 750);
+  } catch (_) {
+    button.disabled = false;
+    button.textContent = original;
+    li.classList.remove("applying");
+    showToast("Couldn't apply \u2014 is the local server running?");
+  }
+}
+
+let _toastTimer = null;
+function showToast(msg) {
+  let el = document.getElementById("pawseToast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "pawseToast";
+    el.className = "toast";
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.classList.add("show");
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
 }
 
 // ---- Breathing exercise -----------------------------------------------------
@@ -377,6 +488,7 @@ function renderMeetingList(data) {
     const li = document.createElement("li");
     li.className = "meeting-row" + (m.after_hours ? " is-after" : m.back_to_back ? " is-b2b" : "");
     li.style.animationDelay = `${i * 40}ms`;
+    li.dataset.key = meetingKey(m.title, m.start);
     const tags = [];
     if (m.back_to_back) tags.push(`<span class="m-tag tag-b2b">back-to-back</span>`);
     if (m.after_hours) tags.push(`<span class="m-tag tag-after">after-hours</span>`);
@@ -388,6 +500,7 @@ function renderMeetingList(data) {
       </span>`;
     root.appendChild(li);
   });
+  applyBiomarkerBadges();
 }
 
 function fmtDur(min) {
@@ -496,6 +609,37 @@ async function renderTrend(days = 14) {
   });
 }
 
+function capWord(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
+
+function renderFace(face) {
+  if (!document.getElementById("faceFill")) return;
+  const f = face || {};
+  const neg = typeof f.negativeRatio === "number" ? f.negativeRatio
+            : typeof f.negative_ratio === "number" ? f.negative_ratio : null;
+  document.getElementById("faceFill").style.width = neg === null ? "0%" : `${Math.round(neg * 100)}%`;
+  document.getElementById("faceVal").textContent = f.dominant ? capWord(f.dominant) : "—";
+  const src = (f.source === "fer" || f.source === "onnx-ferplus") ? "facial model"
+            : f.source === "heuristic-from-voice" ? "estimated from voice"
+            : "no video analysis";
+  document.getElementById("faceNote").textContent = neg === null
+    ? "No facial analysis for this day."
+    : `${Math.round(neg * 100)}% tension · ${src}${f.files ? ` · ${f.files} clip(s)` : ""}`;
+
+  const root = document.getElementById("faceEmotions");
+  if (root) {
+    root.innerHTML = "";
+    Object.entries(f.emotions || {})
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 4)
+      .forEach(([k, val]) => {
+        const chip = document.createElement("span");
+        chip.className = "emo-chip";
+        chip.textContent = `${capWord(k)} ${Math.round((val || 0) * 100)}%`;
+        root.appendChild(chip);
+      });
+  }
+}
+
 function renderVoice(voice) {
   const v = voice || {};
   const idx = typeof v.avg_stress_index === "number" ? v.avg_stress_index : null;
@@ -510,7 +654,184 @@ function fillList(id, items) {
   ul.innerHTML = "";
   (items.length ? items : ["—"]).forEach(t => { const li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
 }
+// ---- Teams meeting biomarkers (Pawse app) ---------------------------------
+function distressColor(s) { return s >= 70 ? "#e8553e" : s >= 40 ? "#f4b740" : "#3fa34d"; }
 
+// Link recorded biomarker sessions to calendar meetings (same title + start).
+let teamsIndex = {};
+function meetingKey(title, start) {
+  return String(title || "").trim().toLowerCase() + "|" + String(start || "");
+}
+function applyBiomarkerBadges() {
+  document.querySelectorAll("#meetingList .meeting-row").forEach(li => {
+    const titleEl = li.querySelector(".m-title");
+    if (!titleEl) return;
+    const rec = teamsIndex[li.dataset.key || ""];
+    let chip = titleEl.querySelector(".distress-chip");
+    if (rec) {
+      const score = Math.round(rec.distress_score ?? 0);
+      if (!chip) {
+        chip = document.createElement("span");
+        chip.className = "distress-chip";
+        titleEl.appendChild(document.createTextNode(" "));
+        titleEl.appendChild(chip);
+      }
+      chip.textContent = score;
+      chip.style.background = distressColor(score);
+      chip.title = "Biomarkers recorded \u00b7 click for details";
+      li.classList.add("clickable");
+      li.onclick = () => openMeetingModal(rec);
+    } else if (chip) {
+      chip.remove();
+      li.classList.remove("clickable");
+      li.onclick = null;
+    }
+  });
+}
+
+// ---- Meeting detail modal (biomarkers + reasons + actions) -----------------
+function clientInsights(s) {
+  const bm = s.biomarkers || {};
+  const lvl = v => (v >= 65 ? "high" : v >= 45 ? "med" : "low");
+  const TXT = {
+    fatigue: ["Frequent/long eye-closures and yawning \u2014 tiredness or screen fatigue.", "Some elevated eye-closure \u2014 mild tiredness.", "Alert eyes \u2014 little fatigue."],
+    emotion: ["Negative facial expression for stretches of the call.", "Occasional negative expressions.", "Mostly neutral/positive expression."],
+    tension: ["Frequent brow furrowing and jaw clenching \u2014 strain.", "Some brow furrowing.", "Relaxed face."],
+    voice: ["Raised pitch, more jitter, fewer pauses \u2014 pressure.", "Slightly elevated vocal arousal.", "Calm, steady voice."],
+  };
+  const LAB = { fatigue: "Fatigue", emotion: "Emotion", tension: "Muscle tension", voice: "Voice" };
+  const reasons = ["fatigue", "emotion", "tension", "voice"].map(k => {
+    const v = Math.round(bm[k] ?? 0); const l = lvl(v);
+    return { marker: k, label: LAB[k], value: v, level: l, text: TXT[k][l === "high" ? 0 : l === "med" ? 1 : 2] };
+  });
+  const recs = [];
+  const f = bm.fatigue || 0, e = bm.emotion || 0, t = bm.tension || 0, vo = bm.voice || 0, d = s.distress_score || 0;
+  if ((s.duration_min || 0) >= 60) recs.push("Keep this meeting type to 45 min or add a mid-point break.");
+  if (t >= 65) recs.push("Do a 30-second shoulder/jaw release before the call.");
+  if (f >= 65) recs.push("Schedule it earlier and take a 10-min screen break beforehand.");
+  if (e >= 65 || vo >= 65) recs.push("Send an agenda with the desired outcome beforehand.");
+  if (d >= 70) recs.push("Add a 15-min recovery Pawse right after; avoid back-to-back.");
+  if (!recs.length) recs.push("Looked balanced \u2014 keep the same setup.");
+  return { summary: "", reasons, recommendations: recs };
+}
+
+function openMeetingModal(s) {
+  const modal = document.getElementById("meetingModal");
+  const body = document.getElementById("modalBody");
+  if (!modal || !body) return;
+  const ins = s.insights || clientInsights(s);
+  const score = Math.round(s.distress_score ?? 0);
+  const bars = BIOMARKERS.map(([k, lab, c]) => {
+    const v = Math.max(0, Math.min(100, Math.round((s.biomarkers || {})[k] ?? 0)));
+    return `<span class="bm"><span class="bm-label">${lab}</span>` +
+      `<span class="bm-bar"><i style="width:${v}%;background:${c}"></i></span>` +
+      `<span class="bm-val">${v}</span></span>`;
+  }).join("");
+  const reasons = (ins.reasons || []).map(r =>
+    `<li class="why-row why-${r.level}">` +
+    `<span class="why-mark">${escapeHtml(r.label)} <b>${r.value}</b></span>` +
+    `<span class="why-text">${escapeHtml(r.text)}</span></li>`).join("");
+  const recs = (ins.recommendations || []).map(a => `<li>${escapeHtml(a)}</li>`).join("");
+  const when = `${escapeHtml(s.start || "")}\u2013${escapeHtml(s.end || "")}` +
+    (s.duration_min ? ` \u00b7 ${fmtDur(s.duration_min)}` : "") +
+    (s.date ? ` \u00b7 ${escapeHtml(s.date)}` : "");
+  body.innerHTML = `
+    <div class="modal-head">
+      <div>
+        <h2>${escapeHtml(s.title || "Teams meeting")}</h2>
+        <p class="modal-sub">${when}</p>
+      </div>
+      <span class="distress-chip big" style="background:${distressColor(score)}">${score}</span>
+    </div>
+    ${ins.summary ? `<p class="modal-summary">${escapeHtml(ins.summary)}</p>` : ""}
+    <div class="bm-grid modal-bm">${bars}</div>
+    <h3 class="modal-h3">Why these readings</h3>
+    <ul class="why-list">${reasons}</ul>
+    <h3 class="modal-h3">Actions for calmer meetings</h3>
+    <ul class="action-list">${recs}</ul>`;
+  modal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeMeetingModal() {
+  const modal = document.getElementById("meetingModal");
+  if (modal) modal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+async function fetchTeamsSessions(date) {
+  try {
+    const res = await fetch(`/api/teams-sessions?date=${encodeURIComponent(date)}`, { cache: "no-store" });
+    if (res.ok) { const p = await res.json(); if (!p.error) { renderTeamsSessions(p); return; } }
+    throw new Error("api");
+  } catch (_) {
+    // Static fallback (no backend): read the bundled sessions file directly.
+    try {
+      const res = await fetch("../data/teams_sessions.json", { cache: "no-store" });
+      const all = await res.json();
+      const shown = (all || []).filter(s => s.date === date);
+      const list = shown.length ? shown : (all || []).slice(-5);
+      renderTeamsSessions({ sessions: list, is_fallback: !shown.length, summary: { count: list.length } });
+    } catch (e) { renderTeamsSessions({ sessions: [] }); }
+  }
+}
+
+const BIOMARKERS = [
+  ["fatigue", "Fatigue", "#6c5ce7"],
+  ["emotion", "Emotion", "#ef5777"],
+  ["tension", "Tension", "#e8553e"],
+  ["voice", "Voice", "#4a90d9"],
+];
+
+function renderTeamsSessions(payload) {
+  const root = document.getElementById("teamsSessions");
+  const sub = document.getElementById("teamsSub");
+  if (!root) return;
+  const sessions = (payload.sessions || []).slice(); // chronological (earliest first)
+  // Index recorded meetings (full session) so the calendar list can link to details.
+  teamsIndex = {};
+  (payload.sessions || []).forEach(s => { teamsIndex[meetingKey(s.title, s.start)] = s; });
+  applyBiomarkerBadges();
+  root.innerHTML = "";
+  if (!sessions.length) {
+    if (sub) sub.textContent = "";
+    const li = document.createElement("li");
+    li.className = "meeting-empty";
+    li.textContent = "No recorded meetings yet \u2014 finish a Teams call to see it here \ud83d\udc3c";
+    root.appendChild(li);
+    return;
+  }
+  if (sub) {
+    const sm = payload.summary || {};
+    sub.textContent = `${sessions.length} meeting${sessions.length > 1 ? "s" : ""}` +
+      (sm.avg_distress != null ? ` \u00b7 avg distress ${sm.avg_distress}` : "") +
+      (payload.is_fallback ? " \u00b7 most recent" : "");
+  }
+  sessions.forEach((s, i) => {
+    const score = Math.round(s.distress_score ?? 0);
+    const bm = s.biomarkers || {};
+    const bars = BIOMARKERS.map(([k, lab, c]) => {
+      const v = Math.max(0, Math.min(100, Math.round(bm[k] ?? 0)));
+      return `<span class="bm"><span class="bm-label">${lab}</span>` +
+        `<span class="bm-bar"><i style="width:${v}%;background:${c}"></i></span>` +
+        `<span class="bm-val">${v}</span></span>`;
+    }).join("");
+    const li = document.createElement("li");
+    li.className = "meeting-row teams-row clickable";
+    li.style.animationDelay = `${i * 40}ms`;
+    li.onclick = () => openMeetingModal(s);
+    li.innerHTML = `
+      <span class="m-time"><strong>${escapeHtml(s.start || "")}</strong><span>${escapeHtml(s.end || "")}</span></span>
+      <span class="m-main">
+        <span class="m-title">${escapeHtml(s.title || "Teams meeting")}
+          <span class="distress-chip" style="background:${distressColor(score)}">${score}</span>
+        </span>
+        <span class="m-meta">${escapeHtml(s.label || "")}${s.duration_min ? " \u00b7 " + fmtDur(s.duration_min) : ""}</span>
+        <span class="bm-grid">${bars}</span>
+      </span>`;
+    root.appendChild(li);
+  });
+}
 // ---- Mode badge & date header ---------------------------------------------
 // Map a backend `source` string to a friendly device name for the badge.
 function deviceLabel(source) {
@@ -576,6 +897,7 @@ function updateDayHeader() {
 async function fetchDay(date, { silent = false } = {}) {
   state.date = date;
   updateDayHeader();
+  fetchTeamsSessions(date);
   let overlayTimer = null;
   if (!silent) overlayTimer = setTimeout(() => { document.getElementById("loading").hidden = false; }, 220);
 
@@ -585,6 +907,7 @@ async function fetchDay(date, { silent = false } = {}) {
       const result = await res.json();
       if (!result.error) {
         render(result);
+        renderRebalance(date);
         recordHistory(date, result.pawse_score ?? result.score, result.label);
         renderTrend();
         return;
@@ -618,6 +941,13 @@ function main() {
     if (next <= state.today) fetchDay(next);
   });
   document.getElementById("todayBtn").addEventListener("click", () => fetchDay(state.today));
+
+  // Meeting detail modal close handlers
+  document.getElementById("modalClose").addEventListener("click", closeMeetingModal);
+  document.getElementById("meetingModal").addEventListener("click", e => {
+    if (e.target.id === "meetingModal") closeMeetingModal();
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeMeetingModal(); });
 
   fetchDay(state.date);
 

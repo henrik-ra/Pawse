@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configure Pawse</title>
+  <script src="https://res.cdn.office.net/teams-js/2.24.0/js/MicrosoftTeams.min.js"
+          crossorigin="anonymous"></script>
+  <style>
+    body { font-family: "Segoe UI", system-ui, sans-serif; padding: 24px; color: #1f2421; }
+    h2 { margin: 0 0 8px; }
+    p { color: #5c6360; }
+  </style>
+</head>
+<body>
+  <h2>🐼 Add Pawse to this meeting</h2>
+  <p>Pawse measures your wellbeing biomarkers on-device during the call and lets you
+     save them to your dashboard afterwards.</p>
+  <script>
+    microsoftTeams.app.initialize().then(function () {
+      microsoftTeams.pages.config.registerOnSaveHandler(function (saveEvent) {
+        microsoftTeams.pages.config.setConfig({
+          entityId: "pawse-capture",
+          contentUrl: window.location.origin + "/teamsapp/meetingpanel.html",
+          websiteUrl: window.location.origin + "/teamsapp/meetingpanel.html",
+          suggestedDisplayName: "Pawse",
+        }).then(function () { saveEvent.notifySuccess(); });
+      });
+      microsoftTeams.pages.config.setValidityState(true);
+    });
+  </script>
+</body>
+</html>

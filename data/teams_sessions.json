@@ -1,0 +1,135 @@
+[
+  {
+    "id": "tm-2026-06-23-0930",
+    "date": "2026-06-23",
+    "title": "Project sync",
+    "start": "09:30",
+    "end": "10:30",
+    "duration_min": 60,
+    "distress_score": 45,
+    "label": "Medium strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 40,
+      "emotion": 38,
+      "tension": 52,
+      "voice": 44
+    }
+  },
+  {
+    "id": "tm-2026-06-23-1030",
+    "date": "2026-06-23",
+    "title": "Design review",
+    "start": "10:30",
+    "end": "11:30",
+    "duration_min": 60,
+    "distress_score": 58,
+    "label": "Medium strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 52,
+      "emotion": 49,
+      "tension": 66,
+      "voice": 55
+    }
+  },
+  {
+    "id": "tm-2026-06-23-1300",
+    "date": "2026-06-23",
+    "title": "Customer call",
+    "start": "13:00",
+    "end": "14:00",
+    "duration_min": 60,
+    "distress_score": 72,
+    "label": "High strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 63,
+      "emotion": 70,
+      "tension": 78,
+      "voice": 68
+    }
+  },
+  {
+    "id": "tm-2026-06-23-1400",
+    "date": "2026-06-23",
+    "title": "Sprint planning",
+    "start": "14:00",
+    "end": "15:30",
+    "duration_min": 90,
+    "distress_score": 64,
+    "label": "Medium strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 68,
+      "emotion": 55,
+      "tension": 70,
+      "voice": 58
+    }
+  },
+  {
+    "id": "tm-2026-06-23-1600",
+    "date": "2026-06-23",
+    "title": "Stakeholder update",
+    "start": "16:00",
+    "end": "17:00",
+    "duration_min": 60,
+    "distress_score": 80,
+    "label": "High strain",
+    "source": "pawse-app",
+    "biomarkers": {
+      "fatigue": 74,
+      "emotion": 76,
+      "tension": 85,
+      "voice": 72
+    }
+  },
+  {
+    "date": "2026-06-23",
+    "title": "Teams meeting",
+    "start": "18:54",
+    "end": "18:54",
+    "duration_min": 1,
+    "distress_score": 28,
+    "biomarkers": {
+      "fatigue": 60,
+      "emotion": 4,
+      "tension": 32,
+      "voice": 0
+    },
+    "source": "pawse-teams-incall",
+    "label": "Low strain"
+  },
+  {
+    "date": "2026-06-23",
+    "title": "Teams meeting",
+    "start": "18:56",
+    "end": "18:56",
+    "duration_min": 1,
+    "distress_score": 27,
+    "biomarkers": {
+      "fatigue": 57,
+      "emotion": 4,
+      "tension": 29,
+      "voice": 0
+    },
+    "source": "pawse-teams-incall",
+    "label": "Low strain"
+  },
+  {
+    "date": "2026-06-25",
+    "title": "1:1 with manager",
+    "start": "11:30",
+    "end": "12:00",
+    "duration_min": 30,
+    "distress_score": 43,
+    "biomarkers": {
+      "fatigue": 40,
+      "emotion": 44,
+      "tension": 54,
+      "voice": 34
+    },
+    "source": "pawse-app",
+    "label": "Medium strain"
+  }
+]

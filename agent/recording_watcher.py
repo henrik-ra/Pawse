@@ -83,9 +83,10 @@ def scan_once(
     api_key: str | None,
     date_override: str | None,
     state: dict[str, float],
+    local_only: bool = False,
 ) -> int:
     """Analyse any new/changed recordings and push their day signals. Returns count."""
-    media = ma.find_media(dirs)
+    media = ma.find_media(dirs, skip_cloud_only=local_only)
     fresh = []
     for f in media:
         try:
@@ -101,8 +102,21 @@ def scan_once(
     print(f"Found {len(fresh)} new/changed recording(s):")
     results = []
     for f, mtime in fresh:
+        if ma.is_cloud_only(f):
+            if local_only:
+                print(f"  · skipping {f.name[:54]} (cloud-only — local-only mode, not downloaded)")
+                continue
+            try:
+                size_mb = f.stat().st_size / (1024 * 1024)
+            except OSError:
+                size_mb = 0
+            print(f"  · downloading {f.name[:54]} ({size_mb:.0f} MB cloud-only)…")
+            ma.ensure_local(f)
         print(f"  · analysing {f.name[:60]}")
-        results.append((f, mtime, ma.analyze_recording(f, date_override=date_override)))
+        results.append((f, mtime, ma.analyze_recording(f, date_override=date_override, local_only=local_only)))
+
+    if not results:
+        return 0
 
     day_signals = ma.aggregate_signals([r for _, _, r in results])
     ma.merge_cache(day_signals)
@@ -132,10 +146,13 @@ def main() -> None:
     parser.add_argument("--folder", action="append", help="extra folder to watch (repeatable)")
     parser.add_argument("--date", help="force this date for all files (demo)")
     parser.add_argument("--reset", action="store_true", help="clear state and reprocess everything")
+    parser.add_argument("--local-only", action="store_true",
+                        help="only analyse on-disk recordings; skip (never download) cloud-only OneDrive files")
     args = parser.parse_args()
 
     api_url = os.environ.get("PAWSE_API_URL", _DEFAULT_API).rstrip("/")
     api_key = os.environ.get("PAWSE_API_KEY")
+    local_only = args.local_only or ma._env_local_only()
 
     dirs = ma.default_recording_dirs()
     if args.folder:
@@ -145,6 +162,8 @@ def main() -> None:
         _STATE_PATH.unlink()
 
     print(f"Pawse watcher → {api_url}")
+    if local_only:
+        print("Mode: local-only (cloud-only OneDrive recordings are skipped, never downloaded)")
     print("Watching:")
     for d in dirs:
         print(f"  - {d}  {'(exists)' if Path(d).exists() else '(missing)'}")
@@ -152,7 +171,7 @@ def main() -> None:
         print("[warn] no ffmpeg backend — .mp4/.m4a skipped. Run: pip install imageio-ffmpeg")
 
     state = _load_state()
-    n = scan_once(dirs, api_url, api_key, args.date, state)
+    n = scan_once(dirs, api_url, api_key, args.date, state, local_only=local_only)
     if args.once:
         if n == 0:
             print("No new recordings.")
@@ -162,7 +181,7 @@ def main() -> None:
     try:
         while True:
             time.sleep(args.interval)
-            scan_once(dirs, api_url, api_key, args.date, state)
+            scan_once(dirs, api_url, api_key, args.date, state, local_only=local_only)
     except KeyboardInterrupt:
         print("\nStopped.")
 

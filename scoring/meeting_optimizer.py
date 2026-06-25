@@ -137,10 +137,11 @@ def recommend(
     longest = _longest_slot(slots)
     recs: list[dict[str, Any]] = []
 
-    # 1) After-hours meetings → pull into the work day's longest free slot.
+    # 1) After-hours *blocker* → pull into the work day's longest free slot.
+    #    Only personal blocks (no other attendees) may be moved.
     for m in ordered:
         start = _to_min(m["start"])
-        if (start < _DAY_START or start >= _DAY_END) and longest:
+        if m.get("is_blocker") and (start < _DAY_START or start >= _DAY_END) and longest:
             dur = _to_min(m["end"]) - start
             new_start = longest[0]
             recs.append({
@@ -153,29 +154,34 @@ def recommend(
                 "outlook_url": _calendar_url(date),
             })
 
-    # 2) Overloaded / low-energy day with a movable meeting → reschedule the
-    #    last back-to-back meeting into the longest free slot.
+    # 2) Overloaded / low-energy day → reschedule a *blocker* (a personal block
+    #    with no other attendees) out of the crunch. You can't unilaterally move
+    #    a meeting that involves other people, so only blockers are candidates;
+    #    pick the shortest one and drop it into the longest free slot (capped to
+    #    the slot so it doesn't create a new overlap).
     b2b = _back_to_back_count(ordered)
     if (b2b >= 2 or (isinstance(score, (int, float)) and score < 50)) and longest:
-        movable = None
+        slot_start, slot_end = longest
+        candidates: list[tuple[int, dict[str, Any]]] = []
         prev_end: int | None = None
         for m in ordered:
             s, e = _to_min(m["start"]), _to_min(m["end"])
-            if prev_end is not None and (s - prev_end) <= _B2B_GAP:
-                movable = m
+            crunch = prev_end is not None and (s - prev_end) <= _B2B_GAP
+            if m.get("is_blocker") and crunch and not (slot_start <= s < slot_end):
+                candidates.append((e - s, m))
             prev_end = e if prev_end is None else max(prev_end, e)
-        if movable and longest[1] - longest[0] >= (_to_min(movable["end"]) - _to_min(movable["start"])):
-            dur = _to_min(movable["end"]) - _to_min(movable["start"])
-            if _to_min(movable["start"]) < longest[0] or _to_min(movable["start"]) > longest[1]:
-                recs.append({
-                    "type": "reschedule",
-                    "title": movable.get("title", "Meeting"),
-                    "from": movable["start"],
-                    "to": _to_hhmm(longest[0]),
-                    "end": _to_hhmm(longest[0] + dur),
-                    "reason": f"{b2b} back-to-back meetings — move this one to ease the crunch.",
-                    "outlook_url": _calendar_url(date),
-                })
+        if candidates:
+            dur, movable = min(candidates, key=lambda c: c[0])
+            new_end = min(slot_start + dur, slot_end)
+            recs.append({
+                "type": "reschedule",
+                "title": movable.get("title", "Meeting"),
+                "from": movable["start"],
+                "to": _to_hhmm(slot_start),
+                "end": _to_hhmm(new_end),
+                "reason": "Solo block with no other attendees — move it to ease your back-to-back crunch.",
+                "outlook_url": _calendar_url(date),
+            })
 
     # 3) No lunch break → propose a 30-min lunch hold in a free lunch sub-slot.
     if not _has_lunch(ordered):

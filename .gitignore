@@ -35,9 +35,20 @@ data/recordings/*
 
 # Pawse pending-actions heartbeat state (local-only)
 data/.pending_actions.json
+data/.applied_actions.json
+
+# Pawse task queue + MCP server logs (local runtime state)
+data/.task_queue.json
+data/.mcp_server.log
+data/.mcp_server.err.log
+data/.dashboard.log
+data/.dashboard.err.log
 
 # WorkIQ calendar exports (transient, may contain personal meeting data)
 data/_workiq_*.json
+
+# Xiaomi watch — local Gadgetbridge database export (personal biometric data)
+data/gadgetbridge-db/
 
 # FER ONNX models (auto-downloaded on first run, ~36 MB)
 voice-analysis/face_analysis/models/

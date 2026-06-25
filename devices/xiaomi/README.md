@@ -83,7 +83,7 @@ app has stored, regardless of brand.
 ## Set up on your Android phone
 
 A one-time setup gets the watch talking to Gadgetbridge and the phone talking to
-your laptop. After that, `start.ps1` keeps everything in sync automatically.
+your laptop. After that, `python server.py` keeps everything in sync automatically.
 
 ### 1. Install Gadgetbridge
 
@@ -148,14 +148,15 @@ Once the phone is connected, start everything with **one command** (keep the
 phone and watch nearby):
 
 ```powershell
-.\start.ps1                          # → http://localhost:8000, auto-syncs every ~2 min
-.\start.ps1 -IntervalSeconds 300     # slower cadence, gentler on battery
-.\start.ps1 -NoSync                  # serve the existing DB only, no live pulling
+python server.py                     # → http://localhost:8000, auto-syncs every ~2 min
+python server.py --wearable xiaomi   # force the Xiaomi watch (e.g. very first run)
+python server.py --interval 300      # slower cadence, gentler on battery
+python server.py --no-sync           # serve the existing DB only, no live pulling
 ```
 
-`start.ps1` runs the [`sync_gadgetbridge.ps1`](sync_gadgetbridge.ps1) loop in the
-background (so the dashboard keeps getting fresh watch data) and the server in
-the foreground. Press **Ctrl+C** to stop both.
+`server.py` runs the [`sync_gadgetbridge.ps1`](sync_gadgetbridge.ps1) loop in the
+background (so the dashboard keeps getting fresh watch data) and serves the
+dashboard in the foreground. Press **Ctrl+C** to stop both.
 
 **One-off sync** (no loop) — over USB or Wi-Fi:
 
@@ -168,8 +169,7 @@ the foreground. Press **Ctrl+C** to stop both.
 pulling new data:
 
 ```powershell
-$env:PAWSE_WEARABLE = "xiaomi"
-python server.py                     # → http://localhost:8000
+python server.py --no-sync           # → http://localhost:8000
 ```
 
 **Inspect a day directly** (handy for debugging):

@@ -28,6 +28,7 @@
       <button class="daynav-today" id="todayBtn">Today</button>
     </nav>
 
+    <a class="join-link" href="meeting.html" title="Open the Teams-style meeting">🎥 Join a meeting</a>
     <div class="status">
       <span class="mode demo" id="mode">○ Demo data</span>
       <span class="updated" id="updated" hidden></span>
@@ -98,6 +99,17 @@
       </div>
     </section>
 
+    <!-- ===== Rebalance your day (action layer) ===== -->
+    <section class="rebalance-section">
+      <article class="card rebalance-card" id="rebalanceCard" hidden>
+        <header class="rebalance-head">
+          <h3>⚡ Rebalance your day</h3>
+          <span class="rebalance-sub" id="rebalanceSub"></span>
+        </header>
+        <ul class="rebalance-list" id="rebalanceList"><!-- filled by app.js --></ul>
+      </article>
+    </section>
+
     <!-- ===== KPI tiles ===== -->
     <section class="tiles" id="tiles"><!-- filled by app.js --></section>
 
@@ -156,6 +168,17 @@
       </article>
     </section>
 
+    <!-- ===== Teams meeting biomarkers (Pawse app) ===== -->
+    <section class="schedule">
+      <article class="card schedule-card">
+        <header class="chart-head">
+          <h3>🎥 Teams meetings · biomarkers</h3>
+          <span class="chart-sub" id="teamsSub"></span>
+        </header>
+        <ul class="meeting-list teams-list" id="teamsSessions"><!-- filled by app.js --></ul>
+      </article>
+    </section>
+
     <!-- ===== Insights ===== -->
     <section class="insights">
       <article class="card insight-card">
@@ -176,6 +199,16 @@
         </div>
         <p class="voice-note" id="voiceNote">—</p>
       </article>
+
+      <article class="card insight-card face-card">
+        <h3>😶 Facial expression</h3>
+        <div class="voice-meter">
+          <div class="voice-bar"><span id="faceFill"></span></div>
+          <div class="voice-val" id="faceVal">—</div>
+        </div>
+        <p class="voice-note" id="faceNote">—</p>
+        <div class="face-emotions" id="faceEmotions"></div>
+      </article>
     </section>
 
     <footer class="disclaimer">
@@ -183,6 +216,14 @@
       <span id="sensor-source">Sensor data is read live from your wearable.</span>
     </footer>
   </main>
+
+  <!-- ===== Meeting detail modal (biomarkers + reasons + actions) ===== -->
+  <div class="modal-backdrop" id="meetingModal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Meeting details">
+      <button class="modal-close" id="modalClose" aria-label="Close">×</button>
+      <div id="modalBody"><!-- filled by app.js --></div>
+    </div>
+  </div>
 
   <!-- Breathing exercise overlay -->
   <div class="breath-overlay" id="breathOverlay" hidden>

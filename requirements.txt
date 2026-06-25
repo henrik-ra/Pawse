@@ -4,6 +4,14 @@ pandas>=2.0
 # Live Fitbit integration (OAuth2 + Web API calls)
 requests>=2.31
 
+# Desktop pet — optional system-tray icon (Show now / Quit)
+pystray>=0.19
+Pillow>=10.0
+
+# Media analysis (face emotion via ONNX models, audio extraction from recordings)
+onnxruntime>=1.16
+imageio-ffmpeg>=0.4
+
 # Local MCP server — exposes Pawse tools to Microsoft Scout / GitHub Copilot
 mcp>=1.0
 

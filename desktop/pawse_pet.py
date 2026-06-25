@@ -66,13 +66,22 @@ BORDER = "#1b1c1e"              # thin black popup border
 
 
 # --- Data -------------------------------------------------------------------
+# Try the configured API first, then fall back to a local server if it's running.
+FALLBACK_URLS = [API_URL, "http://localhost:8000/api/live-day"]
+
+
 def fetch_day() -> dict | None:
-    """Pull the current scored day from the Pawse server (None if unreachable)."""
-    try:
-        with urllib.request.urlopen(API_URL, timeout=8) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except Exception:
-        return None
+    """Pull the current scored day from the Pawse server (None if all unreachable)."""
+    last_err: Exception | None = None
+    for url in dict.fromkeys(FALLBACK_URLS):  # de-dupe, keep order
+        try:
+            with urllib.request.urlopen(url, timeout=8) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except Exception as exc:  # noqa: BLE001 - try the next source
+            last_err = exc
+    if last_err is not None:
+        print(f"[pawse-pet] could not reach Pawse API ({last_err}); showing offline card.")
+    return None
 
 
 def mood_for(score: int) -> str:
@@ -89,6 +98,25 @@ def nudge_for(score: int, steps) -> str:
     if score >= 40:
         return "A short walk would help."
     return "Nice flow — keep it up!"
+
+
+def fetch_top_action() -> dict | None:
+    """Top reschedule recommendation for today (None if the endpoint is absent)."""
+    try:
+        with urllib.request.urlopen(f"{_API_BASE}/api/recommendations", timeout=6) as resp:
+            recs = json.loads(resp.read().decode("utf-8")).get("recommendations", [])
+            return recs[0] if recs else None
+    except Exception:
+        return None
+
+
+def action_nudge(action: dict) -> str:
+    """Short, clickable nudge text for a reschedule recommendation."""
+    title = action.get("title", "Meeting")
+    to, end = action.get("to"), action.get("end")
+    if action.get("type") in ("protect_focus", "protect_lunch"):
+        return f"Protect {title.lower()} {to}–{end}  →"
+    return f"Move “{title}” to {to}  →"
 
 
 # --- Drawing helpers --------------------------------------------------------
@@ -224,22 +252,14 @@ class PawsePet:
                 return
         day = fetch_day()
         if not day:
-            return
+            if not force:
+                return
+            # Forced (e.g. --now): still show the pet with an offline card.
+            day = {"pawse_score": 0, "label": "offline", "data": {}}
         score = int(day.get("pawse_score", day.get("score", 0)) or 0)
         label = day.get("label", "")
         wearable = (day.get("data") or {}).get("wearable", {})
         self._build_popup(score, label, wearable)
-
-    def _build_popup(self, score: int, label: str, steps):
-        top = tk.Toplevel(self.root)
-        self._popup = top
-        top.overrideredirect(True)
-        top.attributes("-topmost", True)
-        try:
-            top.attributes("-transparentcolor", TRANSPARENT)
-        except tk.TclError:
-            pass  # non-Windows: falls back to a rectangular window
-        top.configure(bg=TRANSPARENT)
 
     def _build_popup(self, score: int, label: str, wearable: dict):
         top = tk.Toplevel(self.root)
@@ -293,9 +313,19 @@ class PawsePet:
         if azm is not None:
             px = draw_stat_pill(c, px, 124, f"{int(azm)} active min", INK, STAT_BG) + gap
 
-        # nudge
-        c.create_text(24, 158, anchor="w", text=nudge_for(score, steps), fill=INK,
-                      font=("Segoe UI", 12), width=CARD_W - 48)
+        # nudge — actionable when Pawse has a concrete suggestion, else a gentle tip
+        action = fetch_top_action()
+        if action:
+            c.create_text(24, 158, anchor="w", text=action_nudge(action),
+                          fill="#2f7d3a", font=("Segoe UI", 12, "bold"),
+                          width=CARD_W - 48, tags=("action",))
+            # Click opens the full local dashboard (Rebalance card lives there),
+            # rather than jumping straight to Outlook.
+            c.tag_bind("action", "<Button-1>",
+                       lambda e: (webbrowser.open(_API_BASE), self._close()))
+        else:
+            c.create_text(24, 158, anchor="w", text=nudge_for(score, steps), fill=INK,
+                          font=("Segoe UI", 12), width=CARD_W - 48)
 
         # open-dashboard link (bottom-right)
         c.create_text(CARD_W - 24, 186, anchor="e", text="Open dashboard \u2192",

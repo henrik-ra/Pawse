@@ -19,9 +19,12 @@ _ROOT = Path(__file__).resolve().parent
 _STATE = _ROOT / "data" / ".pending_actions.json"
 
 # Recommendation types that count as an *event* worth waking the agent for.
-# protect_focus is intentionally excluded — it's a nice-to-have, not an alert.
-_EVENT_TYPES = {"reschedule", "move_after_hours", "protect_lunch", "add_buffer"}
+_EVENT_TYPES = {"protect_focus", "protect_lunch", "reschedule", "move_after_hours", "add_buffer"}
 _HIGH = {"reschedule", "move_after_hours"}
+# Self-only actions touch only my own calendar (no attendees emailed) and are
+# safe for the agent to apply automatically. Everything else affects other
+# people, so it must only ever be proposed.
+_SELF_ONLY = {"protect_focus", "protect_lunch"}
 
 
 def _action_id(date: str, rec: dict[str, Any]) -> str:
@@ -33,13 +36,16 @@ def detect(date: str, score: int | None, recommendations: list[dict[str, Any]]) 
     """Build event objects (stable id + priority) from a day's recommendations."""
     events: list[dict[str, Any]] = []
     for rec in recommendations:
-        if rec.get("type") not in _EVENT_TYPES:
+        rtype = rec.get("type")
+        if rtype not in _EVENT_TYPES:
             continue
         events.append({
             "id": _action_id(date, rec),
             "date": date,
             "score": score,
-            "priority": "high" if rec.get("type") in _HIGH else "normal",
+            "priority": "high" if rtype in _HIGH else "normal",
+            "auto_apply": rtype in _SELF_ONLY,
+            "affects": "self" if rtype in _SELF_ONLY else "others",
             **rec,
         })
     return events

@@ -1,0 +1,325 @@
+{
+  "source": "mock",
+  "note": "Mocked per-meeting voice + face biomarkers for the Pawse demo. Same shape as the real data/media_signals.json signals, but stored per meeting so the Copilot Studio agent (via the Pawse MCP server) always has 5 meetings of biomarker data to reason over without a live recording pipeline.",
+  "days": {
+    "2026-06-25": [
+      {
+        "meeting": "June 25th AI Security for Everyone - (2/3)",
+        "start": "09:00",
+        "end": "10:00",
+        "stress_index": 0.55,
+        "strain_label": "steady",
+        "voice": {
+          "source": "mock-librosa",
+          "avg_stress_index": 0.55,
+          "arousal": 0.55,
+          "segments": 6,
+          "features": { "pitch_variability": 0.52, "speech_rate": 0.55, "pause_ratio": 0.42, "energy": 0.5 },
+          "biomarkers": { "f0_mean_hz": 150.0, "jitter": 0.31, "shimmer": 0.12, "hnr_db": 11.5, "hnr_norm": 0.6, "spectral_centroid_norm": 0.3, "energy_variability": 0.4, "voiced_fraction": 0.55 }
+        },
+        "face": {
+          "source": "mock-ferplus", "available": true, "dominant": "neutral", "negativeRatio": 0.1,
+          "emotions": { "neutral": 0.68, "happy": 0.18, "sad": 0.05, "angry": 0.05, "fear": 0.02, "surprise": 0.02, "disgust": 0.0 }
+        }
+      },
+      {
+        "meeting": "Brainstorm DB",
+        "start": "10:30",
+        "end": "12:00",
+        "stress_index": 0.5,
+        "strain_label": "steady",
+        "voice": {
+          "source": "mock-librosa",
+          "avg_stress_index": 0.5,
+          "arousal": 0.5,
+          "segments": 8,
+          "features": { "pitch_variability": 0.45, "speech_rate": 0.4, "pause_ratio": 0.5, "energy": 0.45 },
+          "biomarkers": { "f0_mean_hz": 146.0, "jitter": 0.28, "shimmer": 0.11, "hnr_db": 12.5, "hnr_norm": 0.66, "spectral_centroid_norm": 0.27, "energy_variability": 0.35, "voiced_fraction": 0.5 }
+        },
+        "face": {
+          "source": "mock-ferplus", "available": true, "dominant": "neutral", "negativeRatio": 0.12,
+          "emotions": { "neutral": 0.72, "happy": 0.12, "sad": 0.08, "angry": 0.04, "fear": 0.02, "surprise": 0.02, "disgust": 0.0 }
+        }
+      },
+      {
+        "meeting": "EMEA Virtual Hackathon Showcase/ Science Fair",
+        "start": "13:00",
+        "end": "14:00",
+        "stress_index": 0.72,
+        "strain_label": "elevated",
+        "voice": {
+          "source": "mock-librosa",
+          "avg_stress_index": 0.72,
+          "arousal": 0.72,
+          "segments": 5,
+          "features": { "pitch_variability": 0.74, "speech_rate": 0.7, "pause_ratio": 0.24, "energy": 0.62 },
+          "biomarkers": { "f0_mean_hz": 165.0, "jitter": 0.42, "shimmer": 0.16, "hnr_db": 8.8, "hnr_norm": 0.42, "spectral_centroid_norm": 0.4, "energy_variability": 0.55, "voiced_fraction": 0.64 }
+        },
+        "face": {
+          "source": "mock-ferplus", "available": true, "dominant": "neutral", "negativeRatio": 0.23,
+          "emotions": { "neutral": 0.55, "happy": 0.2, "sad": 0.08, "angry": 0.1, "fear": 0.05, "surprise": 0.02, "disgust": 0.0 }
+        }
+      },
+      {
+        "meeting": "EMEA AI Day - June 2026",
+        "start": "14:00",
+        "end": "17:00",
+        "stress_index": 0.81,
+        "strain_label": "high",
+        "voice": {
+          "source": "mock-librosa",
+          "avg_stress_index": 0.81,
+          "arousal": 0.81,
+          "segments": 12,
+          "features": { "pitch_variability": 0.82, "speech_rate": 0.76, "pause_ratio": 0.18, "energy": 0.68 },
+          "biomarkers": { "f0_mean_hz": 172.0, "jitter": 0.5, "shimmer": 0.19, "hnr_db": 7.2, "hnr_norm": 0.34, "spectral_centroid_norm": 0.46, "energy_variability": 0.62, "voiced_fraction": 0.69 }
+        },
+        "face": {
+          "source": "mock-ferplus", "available": true, "dominant": "neutral", "negativeRatio": 0.38,
+          "emotions": { "neutral": 0.48, "happy": 0.1, "sad": 0.12, "angry": 0.14, "fear": 0.08, "surprise": 0.04, "disgust": 0.04 }
+        }
+      },
+      {
+        "meeting": "C&AI Compete Office Hours: let\u2019s win together",
+        "start": "15:30",
+        "end": "15:55",
+        "stress_index": 0.68,
+        "strain_label": "elevated",
+        "voice": {
+          "source": "mock-librosa",
+          "avg_stress_index": 0.68,
+          "arousal": 0.68,
+          "segments": 3,
+          "features": { "pitch_variability": 0.66, "speech_rate": 0.64, "pause_ratio": 0.3, "energy": 0.58 },
+          "biomarkers": { "f0_mean_hz": 160.0, "jitter": 0.38, "shimmer": 0.15, "hnr_db": 9.6, "hnr_norm": 0.46, "spectral_centroid_norm": 0.37, "energy_variability": 0.5, "voiced_fraction": 0.6 }
+        },
+        "face": {
+          "source": "mock-ferplus", "available": true, "dominant": "neutral", "negativeRatio": 0.22,
+          "emotions": { "neutral": 0.58, "happy": 0.14, "sad": 0.1, "angry": 0.1, "fear": 0.05, "surprise": 0.02, "disgust": 0.01 }
+        }
+      }
+    ],
+    "2026-06-18": [
+      {
+        "meeting": "Daily standup",
+        "start": "09:00",
+        "end": "09:30",
+        "stress_index": 0.28,
+        "strain_label": "calm",
+        "voice": {
+          "source": "mock-librosa",
+          "avg_stress_index": 0.28,
+          "arousal": 0.28,
+          "segments": 3,
+          "features": {
+            "pitch_variability": 0.31,
+            "speech_rate": 0.42,
+            "pause_ratio": 0.61,
+            "energy": 0.38
+          },
+          "biomarkers": {
+            "f0_mean_hz": 142.0,
+            "jitter": 0.21,
+            "shimmer": 0.09,
+            "hnr_db": 14.2,
+            "hnr_norm": 0.78,
+            "spectral_centroid_norm": 0.22,
+            "energy_variability": 0.24,
+            "voiced_fraction": 0.58
+          }
+        },
+        "face": {
+          "source": "mock-ferplus",
+          "available": true,
+          "dominant": "neutral",
+          "negativeRatio": 0.04,
+          "emotions": {
+            "neutral": 0.71,
+            "happy": 0.25,
+            "sad": 0.01,
+            "angry": 0.01,
+            "fear": 0.0,
+            "surprise": 0.02,
+            "disgust": 0.0
+          }
+        }
+      },
+      {
+        "meeting": "Project sync",
+        "start": "09:30",
+        "end": "10:30",
+        "stress_index": 0.46,
+        "strain_label": "steady",
+        "voice": {
+          "source": "mock-librosa",
+          "avg_stress_index": 0.46,
+          "arousal": 0.46,
+          "segments": 5,
+          "features": {
+            "pitch_variability": 0.52,
+            "speech_rate": 0.58,
+            "pause_ratio": 0.44,
+            "energy": 0.51
+          },
+          "biomarkers": {
+            "f0_mean_hz": 156.0,
+            "jitter": 0.34,
+            "shimmer": 0.13,
+            "hnr_db": 11.0,
+            "hnr_norm": 0.64,
+            "spectral_centroid_norm": 0.34,
+            "energy_variability": 0.41,
+            "voiced_fraction": 0.62
+          }
+        },
+        "face": {
+          "source": "mock-ferplus",
+          "available": true,
+          "dominant": "neutral",
+          "negativeRatio": 0.11,
+          "emotions": {
+            "neutral": 0.66,
+            "happy": 0.18,
+            "sad": 0.05,
+            "angry": 0.05,
+            "fear": 0.01,
+            "surprise": 0.05,
+            "disgust": 0.0
+          }
+        }
+      },
+      {
+        "meeting": "Design review",
+        "start": "10:30",
+        "end": "11:30",
+        "stress_index": 0.63,
+        "strain_label": "elevated",
+        "voice": {
+          "source": "mock-librosa",
+          "avg_stress_index": 0.63,
+          "arousal": 0.63,
+          "segments": 6,
+          "features": {
+            "pitch_variability": 0.68,
+            "speech_rate": 0.71,
+            "pause_ratio": 0.29,
+            "energy": 0.64
+          },
+          "biomarkers": {
+            "f0_mean_hz": 171.0,
+            "jitter": 0.48,
+            "shimmer": 0.18,
+            "hnr_db": 7.4,
+            "hnr_norm": 0.48,
+            "spectral_centroid_norm": 0.49,
+            "energy_variability": 0.58,
+            "voiced_fraction": 0.69
+          }
+        },
+        "face": {
+          "source": "mock-ferplus",
+          "available": true,
+          "dominant": "neutral",
+          "negativeRatio": 0.22,
+          "emotions": {
+            "neutral": 0.58,
+            "happy": 0.1,
+            "sad": 0.12,
+            "angry": 0.09,
+            "fear": 0.03,
+            "surprise": 0.07,
+            "disgust": 0.01
+          }
+        }
+      },
+      {
+        "meeting": "Customer call",
+        "start": "13:00",
+        "end": "14:00",
+        "stress_index": 0.71,
+        "strain_label": "high",
+        "voice": {
+          "source": "mock-librosa",
+          "avg_stress_index": 0.71,
+          "arousal": 0.71,
+          "segments": 7,
+          "features": {
+            "pitch_variability": 0.76,
+            "speech_rate": 0.79,
+            "pause_ratio": 0.21,
+            "energy": 0.72
+          },
+          "biomarkers": {
+            "f0_mean_hz": 184.0,
+            "jitter": 0.57,
+            "shimmer": 0.22,
+            "hnr_db": 5.1,
+            "hnr_norm": 0.37,
+            "spectral_centroid_norm": 0.58,
+            "energy_variability": 0.67,
+            "voiced_fraction": 0.73
+          }
+        },
+        "face": {
+          "source": "mock-ferplus",
+          "available": true,
+          "dominant": "neutral",
+          "negativeRatio": 0.31,
+          "emotions": {
+            "neutral": 0.52,
+            "happy": 0.08,
+            "sad": 0.16,
+            "angry": 0.13,
+            "fear": 0.05,
+            "surprise": 0.05,
+            "disgust": 0.01
+          }
+        }
+      },
+      {
+        "meeting": "Sprint planning",
+        "start": "14:00",
+        "end": "15:30",
+        "stress_index": 0.82,
+        "strain_label": "high",
+        "voice": {
+          "source": "mock-librosa",
+          "avg_stress_index": 0.82,
+          "arousal": 0.82,
+          "segments": 9,
+          "features": {
+            "pitch_variability": 0.85,
+            "speech_rate": 0.84,
+            "pause_ratio": 0.15,
+            "energy": 0.8
+          },
+          "biomarkers": {
+            "f0_mean_hz": 198.0,
+            "jitter": 0.66,
+            "shimmer": 0.27,
+            "hnr_db": 3.2,
+            "hnr_norm": 0.27,
+            "spectral_centroid_norm": 0.66,
+            "energy_variability": 0.78,
+            "voiced_fraction": 0.76
+          }
+        },
+        "face": {
+          "source": "mock-ferplus",
+          "available": true,
+          "dominant": "sad",
+          "negativeRatio": 0.43,
+          "emotions": {
+            "neutral": 0.45,
+            "happy": 0.05,
+            "sad": 0.22,
+            "angry": 0.16,
+            "fear": 0.06,
+            "surprise": 0.05,
+            "disgust": 0.01
+          }
+        }
+      }
+    ]
+  }
+}
