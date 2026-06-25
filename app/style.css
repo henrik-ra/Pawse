@@ -405,6 +405,106 @@ body {
 .loading-panda { font-size: 3.4rem; animation: spinwobble 1.1s ease-in-out infinite; }
 .loading-text { font-weight: 700; color: var(--ink-soft); }
 
+/* ---- Smart Meeting Timing (SMT) UI ---- */
+.m-action.smt-trigger {
+  background: none;
+  border: 1.5px solid var(--accent);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s, background 0.2s;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.m-action.smt-trigger:hover { opacity: 1; background: rgba(108,92,231,0.08); }
+.m-action.smt-trigger:disabled { opacity: 0.3; cursor: default; }
+
+.meeting-row { display: flex; align-items: center; }
+
+.smt-overlay {
+  position: fixed; inset: 0;
+  background: rgba(27,28,30,0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  animation: fadeIn 0.2s;
+}
+.smt-overlay[hidden] { display: none; }
+
+.smt-stage {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 2rem 2.2rem;
+  max-width: 460px;
+  width: 90vw;
+  position: relative;
+  animation: slideUp 0.25s ease-out;
+}
+
+.smt-close {
+  position: absolute; top: 12px; right: 16px;
+  background: none; border: none;
+  font-size: 1.5rem; cursor: pointer; color: var(--ink-soft);
+}
+
+.smt-stage h3 { margin: 0 0 0.6rem; font-size: 1.1rem; }
+.smt-title { color: var(--ink-soft); font-size: 0.9rem; margin-bottom: 1rem; }
+
+.smt-notice {
+  background: #fff3cd;
+  border: 1px solid #f4b740;
+  border-radius: 8px;
+  padding: 0.6rem 0.9rem;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.smt-slots { list-style: none; padding: 0; margin: 0 0 1rem; }
+.smt-slot {
+  display: flex; align-items: center; gap: 0.7rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+  transition: border-color 0.2s;
+}
+.smt-slot:hover { border-color: var(--accent); }
+.smt-slot-time { font-weight: 600; min-width: 100px; }
+.smt-slot-meta { color: var(--ink-soft); font-size: 0.82rem; flex: 1; }
+
+.smt-btn {
+  border: none; border-radius: 8px;
+  padding: 0.5rem 1.1rem;
+  font-size: 0.88rem; font-weight: 600;
+  cursor: pointer; transition: background 0.2s;
+}
+.smt-btn.smt-select { background: var(--accent); color: #fff; }
+.smt-btn.smt-select:hover { background: #5a4bd4; }
+.smt-btn.smt-confirm { background: var(--bamboo); color: #fff; }
+.smt-btn.smt-confirm:hover { background: var(--bamboo-dark); }
+.smt-btn.smt-keep { background: var(--bg-2); color: var(--ink); }
+.smt-btn.smt-keep:hover { background: var(--line); }
+
+.smt-actions { display: flex; gap: 0.7rem; margin-top: 1rem; }
+.smt-confirm-text { line-height: 1.5; margin-bottom: 0.5rem; }
+.smt-loading { text-align: center; padding: 2rem; color: var(--ink-soft); }
+.smt-error { color: var(--bad); padding: 1rem 0; }
+.smt-error p { margin: 0 0 0.5rem; }
+.smt-success { text-align: center; padding: 1rem 0; }
+.smt-success h3 { color: var(--bamboo); }
+.smt-empty { color: var(--ink-soft); font-style: italic; }
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* ===== Animations ===== */
 @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

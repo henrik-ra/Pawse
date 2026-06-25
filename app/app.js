@@ -383,7 +383,8 @@ function renderMeetingList(data) {
       <span class="m-main">
         <span class="m-title">${escapeHtml(m.title)}</span>
         <span class="m-meta">${fmtDur(dur)}${tags.length ? " " + tags.join(" ") : ""}</span>
-      </span>`;
+      </span>
+      <button class="m-action smt-trigger" onclick="openSmartTiming('${escapeHtml(m.id || "")}', '${state.date}')" title="Find a better time for this meeting"${m.id ? "" : " disabled"}>🕐</button>`;
     root.appendChild(li);
   });
 }
@@ -583,6 +584,196 @@ function main() {
 
   // Auto-refresh, but only while viewing today (live data keeps changing).
   if (REFRESH_MS > 0) setInterval(() => { if (state.date === state.today) fetchDay(state.today, { silent: true }); }, REFRESH_MS);
+}
+
+// ---- Smart Meeting Timing (reschedule UI) ----------------------------------
+const SMT = {
+  activeMeetingId: null,
+  slots: [],
+  meetingTitle: "",
+  currentTime: "",
+  isOrganizer: false,
+};
+
+async function openSmartTiming(meetingId, date) {
+  const overlay = document.getElementById("smartTimingOverlay");
+  if (!overlay) return;
+  overlay.hidden = false;
+  const content = document.getElementById("smartTimingContent");
+  content.innerHTML = `<div class="smt-loading">Finding better times…</div>`;
+  SMT.activeMeetingId = meetingId;
+
+  try {
+    const res = await fetch(`/api/meetings/${encodeURIComponent(meetingId)}/availability`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date }),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (data.code === "auth_required") {
+        content.innerHTML = `<div class="smt-error">
+          <p>Not connected to Microsoft 365.</p>
+          <p>Run <code>python devices/outlook/ms_auth.py</code> to sign in.</p>
+        </div>`;
+      } else {
+        content.innerHTML = `<div class="smt-error"><p>${escapeHtml(data.error || "Failed to find times.")}</p></div>`;
+      }
+      return;
+    }
+
+    SMT.slots = data.suggestions || [];
+    SMT.meetingTitle = data.meeting_title || "";
+    SMT.currentTime = data.current_time || "";
+    SMT.isOrganizer = data.is_organizer || false;
+
+    renderSmartTimingSlots();
+  } catch (e) {
+    content.innerHTML = `<div class="smt-error"><p>Network error: ${escapeHtml(e.message)}</p></div>`;
+  }
+}
+
+function renderSmartTimingSlots() {
+  const content = document.getElementById("smartTimingContent");
+  if (!SMT.slots.length) {
+    content.innerHTML = `
+      <h3>🕐 Smart Meeting Timing</h3>
+      <p class="smt-title">${escapeHtml(SMT.meetingTitle)} · ${escapeHtml(SMT.currentTime)}</p>
+      <p class="smt-empty">No alternative times found for this meeting.</p>
+      <button class="smt-btn smt-keep" onclick="closeSmartTiming()">Keep as is</button>`;
+    return;
+  }
+
+  const orgNotice = SMT.isOrganizer ? "" :
+    `<div class="smt-notice">You are not the organizer of this meeting. Pawse can prepare a reschedule request instead.</div>`;
+
+  const slotsHtml = SMT.slots.map((s, i) => {
+    const conf = s.confidence === "good" ? "✓" : s.confidence === "fair" ? "~" : "?";
+    const avail = `${s.available_count}/${s.total_attendees} available`;
+    return `<li class="smt-slot" data-idx="${i}">
+      <span class="smt-slot-time">${escapeHtml(s.start_local)}–${escapeHtml(s.end_local)}</span>
+      <span class="smt-slot-meta">${conf} ${avail}</span>
+      <button class="smt-btn smt-select" onclick="selectTimeSlot(${i})">Select</button>
+    </li>`;
+  }).join("");
+
+  content.innerHTML = `
+    <h3>🕐 Smart Meeting Timing</h3>
+    <p class="smt-title">${escapeHtml(SMT.meetingTitle)} · currently ${escapeHtml(SMT.currentTime)}</p>
+    ${orgNotice}
+    <ul class="smt-slots">${slotsHtml}</ul>
+    <button class="smt-btn smt-keep" onclick="closeSmartTiming()">Keep as is</button>`;
+}
+
+function selectTimeSlot(idx) {
+  const slot = SMT.slots[idx];
+  if (!slot) return;
+
+  const content = document.getElementById("smartTimingContent");
+  if (SMT.isOrganizer) {
+    content.innerHTML = `
+      <h3>Confirm reschedule</h3>
+      <p class="smt-confirm-text">You are about to move <strong>${escapeHtml(SMT.meetingTitle)}</strong>
+        from <strong>${escapeHtml(SMT.currentTime)}</strong>
+        to <strong>${escapeHtml(slot.start_local)}–${escapeHtml(slot.end_local)}</strong>.
+        Attendees will receive an update. Confirm?</p>
+      <div class="smt-actions">
+        <button class="smt-btn smt-confirm" onclick="confirmReschedule(${idx})">Confirm move</button>
+        <button class="smt-btn smt-keep" onclick="renderSmartTimingSlots()">Go back</button>
+      </div>`;
+  } else {
+    content.innerHTML = `
+      <h3>Request reschedule</h3>
+      <p class="smt-confirm-text">You are not the organizer of this meeting.
+        Pawse can prepare a reschedule request to <strong>${escapeHtml(SMT.meetingTitle)}</strong>'s organizer,
+        suggesting <strong>${escapeHtml(slot.start_local)}–${escapeHtml(slot.end_local)}</strong>.</p>
+      <div class="smt-actions">
+        <button class="smt-btn smt-confirm" onclick="sendRescheduleRequest(${idx})">Create draft request</button>
+        <button class="smt-btn smt-keep" onclick="renderSmartTimingSlots()">Go back</button>
+      </div>`;
+  }
+}
+
+async function confirmReschedule(idx) {
+  const slot = SMT.slots[idx];
+  const content = document.getElementById("smartTimingContent");
+  content.innerHTML = `<div class="smt-loading">Rescheduling…</div>`;
+
+  try {
+    const res = await fetch(`/api/meetings/${encodeURIComponent(SMT.activeMeetingId)}/reschedule`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        new_start: slot.start,
+        new_end: slot.end,
+        confirmed: true,
+        date: state.date,
+      }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      content.innerHTML = `
+        <div class="smt-success">
+          <h3>✓ Meeting moved</h3>
+          <p>${escapeHtml(data.message)}</p>
+          <button class="smt-btn smt-keep" onclick="closeSmartTiming(); fetchDay(state.date);">Done</button>
+        </div>`;
+    } else {
+      content.innerHTML = `
+        <div class="smt-error">
+          <p>${escapeHtml(data.message || "Reschedule failed.")}</p>
+          <button class="smt-btn smt-keep" onclick="renderSmartTimingSlots()">Try another time</button>
+        </div>`;
+    }
+  } catch (e) {
+    content.innerHTML = `<div class="smt-error"><p>Network error: ${escapeHtml(e.message)}</p></div>`;
+  }
+}
+
+async function sendRescheduleRequest(idx) {
+  const slot = SMT.slots[idx];
+  const content = document.getElementById("smartTimingContent");
+  content.innerHTML = `<div class="smt-loading">Creating draft…</div>`;
+
+  try {
+    const res = await fetch(`/api/meetings/${encodeURIComponent(SMT.activeMeetingId)}/draft-reschedule-request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        suggested_start: slot.start,
+        suggested_end: slot.end,
+        date: state.date,
+        reason: "This meeting may be more effective in a lower-pressure slot.",
+      }),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      content.innerHTML = `
+        <div class="smt-success">
+          <h3>✓ Draft created</h3>
+          <p>${escapeHtml(data.message)}</p>
+          <button class="smt-btn smt-keep" onclick="closeSmartTiming()">Done</button>
+        </div>`;
+    } else {
+      content.innerHTML = `
+        <div class="smt-error">
+          <p>${escapeHtml(data.message || "Failed to create draft.")}</p>
+          <button class="smt-btn smt-keep" onclick="closeSmartTiming()">Close</button>
+        </div>`;
+    }
+  } catch (e) {
+    content.innerHTML = `<div class="smt-error"><p>Network error: ${escapeHtml(e.message)}</p></div>`;
+  }
+}
+
+function closeSmartTiming() {
+  const overlay = document.getElementById("smartTimingOverlay");
+  if (overlay) overlay.hidden = true;
+  SMT.activeMeetingId = null;
+  SMT.slots = [];
 }
 
 main();

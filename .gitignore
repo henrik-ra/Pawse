@@ -15,6 +15,10 @@ devices/google_health/.env
 devices/google_health/google_health_cache.json
 .env
 
+# Microsoft 365 / Outlook secrets & tokens — never commit these
+devices/outlook/ms_tokens.json
+devices/outlook/.env
+
 # Calendar cache — contains real meeting titles; commit only the .sample file
 data/calendar_cache.json
 
