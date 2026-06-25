@@ -53,11 +53,15 @@ prewarm: Any = None
 
 def _detect_wearable() -> str:
     explicit = (os.environ.get("PAWSE_WEARABLE") or "").strip().lower()
-    if explicit and explicit != "auto":
-        return explicit
     gb_db = os.environ.get("GADGETBRIDGE_DB") or (
         Path.home() / "Pawse" / "data" / "gadgetbridge-db" / "Gadgetbridge.db"
     )
+    # Make sure the Xiaomi reader (gadgetbridge_client) looks at the very same DB
+    # we detect on, otherwise it can't find it and silently serves demo data.
+    if Path(gb_db).exists():
+        os.environ["GADGETBRIDGE_DB"] = str(gb_db)
+    if explicit and explicit != "auto":
+        return explicit
     if Path(gb_db).exists():
         return "xiaomi"
     return "google-health"
