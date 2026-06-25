@@ -125,6 +125,17 @@ def reset_pending_actions() -> dict[str, Any]:
 if __name__ == "__main__":
     import sys
 
+    # Warm the wearable cache in the background at startup so the very first
+    # tool call returns live data (e.g. Google Health from google_tokens.json)
+    # fast, instead of doing a slow cold fetch that an agent might time out on.
+    # Uses the same wearable as build_live_day; a no-op when not logged in.
+    try:
+        from server import prewarm
+
+        prewarm()
+    except Exception:
+        pass
+
     if "--http" in sys.argv:
         # Remote MCP over streamable HTTP — for Copilot Studio / cloud agents.
         # Serves http://<host>:<port>/mcp. Default port 8765 (8000 is the web app).
