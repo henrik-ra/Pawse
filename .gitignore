@@ -30,6 +30,9 @@ data/.media_state.json
 data/recordings/*
 !data/recordings/README.md
 
+# Pawse pending-actions heartbeat state (local-only)
+data/.pending_actions.json
+
 # WorkIQ calendar exports (transient, may contain personal meeting data)
 data/_workiq_*.json
 

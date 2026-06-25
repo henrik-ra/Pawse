@@ -93,5 +93,34 @@ def get_day(date: str | None = None) -> dict[str, Any]:
     }
 
 
+@mcp.tool()
+def get_pending_actions(date: str | None = None) -> dict[str, Any]:
+    """For an agent heartbeat: return only NEW, not-yet-surfaced urgent actions
+    for the day (reschedule / move after-hours / protect lunch). Returns an empty
+    list when nothing new — so a periodic poll stays quiet until something changes.
+    Calling this marks the returned actions as surfaced so they aren't repeated.
+    Each item has: id, priority, type, title, from, to, end, reason."""
+    import pawse_events
+    from scoring.meeting_optimizer import recommend
+
+    day = _scored_day(date)
+    data = day.get("data", {})
+    d = data.get("date") or date
+    score = day.get("pawse_score")
+    recs = recommend(data.get("meetings", []), date=d, score=score)
+    new = pawse_events.pending(d, score, recs, mark=True)
+    return {"date": d, "score": score, "count": len(new), "pending": new}
+
+
+@mcp.tool()
+def reset_pending_actions() -> dict[str, Any]:
+    """Forget which actions were already surfaced, so the next get_pending_actions
+    re-emits today's events. Useful for testing/demos."""
+    import pawse_events
+
+    pawse_events.reset()
+    return {"ok": True}
+
+
 if __name__ == "__main__":
     mcp.run()
