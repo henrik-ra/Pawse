@@ -131,5 +131,53 @@
     },
     "source": "pawse-app",
     "label": "Medium strain"
+  },
+  {
+    "date": "2026-06-25",
+    "title": "Project sync",
+    "start": "09:30",
+    "end": "10:30",
+    "duration_min": 60,
+    "distress_score": 39,
+    "biomarkers": {
+      "fatigue": 39,
+      "emotion": 40,
+      "tension": 39,
+      "voice": 38
+    },
+    "source": "pawse-app",
+    "label": "Low strain"
+  },
+  {
+    "date": "2026-06-25",
+    "title": "Daily standup",
+    "start": "09:00",
+    "end": "09:30",
+    "duration_min": 30,
+    "distress_score": 36,
+    "biomarkers": {
+      "fatigue": 35,
+      "emotion": 34,
+      "tension": 42,
+      "voice": 36
+    },
+    "source": "pawse-app",
+    "label": "Low strain"
+  },
+  {
+    "date": "2026-06-25",
+    "title": "Design review",
+    "start": "10:30",
+    "end": "11:30",
+    "duration_min": 60,
+    "distress_score": 40,
+    "biomarkers": {
+      "fatigue": 46,
+      "emotion": 39,
+      "tension": 39,
+      "voice": 34
+    },
+    "source": "pawse-app",
+    "label": "Medium strain"
   }
 ]
